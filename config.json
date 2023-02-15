@@ -1,0 +1,10 @@
+{
+    "apiKey": "AIzaSyDZQY4Z2ZQY4Z2ZQY4Z2ZQY4Z2ZQY4Z2ZQ",
+    "domain": "www.example.com",
+    "email": "someemail@email.com",
+    "password": "somepassword",
+    "forumModuleIDs": [
+        "1000001",
+        "1000002"
+    ]
+}
