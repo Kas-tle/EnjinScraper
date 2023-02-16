@@ -121,24 +121,32 @@ interface ForumContent {
 export async function getForums(domain: string, sessionID: string, forumModuleIDs: string[]): Promise<ForumContent> {
     console.log('Getting forum content...')
     const forumContent: ForumContent = {};
+    const totalModules = forumModuleIDs.length;
+    let moduleCount = 1;
     for (const forumModuleID of forumModuleIDs) {
-        console.log(`Getting forum content for module ${forumModuleID}...`)
+        console.log(`Getting forum content for module ${forumModuleID}... (${moduleCount}/${totalModules})`)
         const forumIDs = await getModuleForumIDs(domain, sessionID, forumModuleID);
         console.log(`Found ${forumIDs.length} forums in module ${forumModuleID}.`)
         const forumModuleContent: { [forumId: string]: Forum } = {};
+        const totalForums = forumIDs.length;
+        let forumCount = 1;
         for (const forumID of forumIDs) {
-            console.log(`Getting forum content for forum ${forumID}...`)
+            console.log(`Getting forum content for forum ${forumID}... (${forumCount}/${totalForums})`)
             const threadIDs = await getForumThreadIDs(domain, sessionID, forumID);
             console.log(`Found ${threadIDs.length} threads in forum ${forumID}.`)
             const threads: Forum = {};
+            const totalThreads = threadIDs.length;
+            let threadCount = 1;
             for (const threadID of threadIDs) {
-                console.log(`Getting forum content for thread ${threadID}...`)
+                console.log(`Getting forum content for thread ${threadID}... (${threadCount++}/${totalThreads}) [Forum (${forumCount}/${totalForums})] [Module (${moduleCount}/${totalModules})]`)
                 const threadContent = await getThreadContent(domain, sessionID, threadID);
                 threads[threadID] = threadContent;
             }
             forumModuleContent[forumID] = threads;
+            forumCount++;
         }
         forumContent[forumModuleID] = forumModuleContent;
+        moduleCount++;
     }
     return forumContent;
 }

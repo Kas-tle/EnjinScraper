@@ -7,6 +7,7 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
 
     let page = 1;
     do {
+        console.log(`Getting news posts for module ${newsModuleID} page ${page}...`);
         const { data } = await axios.post<EnjinResponse<Record<string, any>[]>>(
             `https://${domain}/api/v1/api.php`,
             {
@@ -18,7 +19,10 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
             { headers: { 'Content-Type': 'application/json' } }
         );
 
-        console.log(JSON.stringify(data, null, 4));
+        if (data.error) {
+            console.log(`Error getting news posts for module ${newsModuleID}: ${data.error.code} ${data.error.message}`)
+            break;
+        }
 
         result = data.result;
 
@@ -36,7 +40,10 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
 export async function getNews(domain: string, sessionID: string, newsModuleIDs: string[]): Promise<Record<string, any>> {
     let allNews: Record<string, any> = {};
 
+    const totalNewsModules = newsModuleIDs.length;
+    let currentNewsModule = 1;
     for (const newsModuleID of newsModuleIDs) {
+        console.log(`Getting news posts for module ${newsModuleID}... (${currentNewsModule}/${totalNewsModules})`);
         const moduleNews = await getModuleNews(domain, sessionID, newsModuleID);
         allNews = { ...allNews, ...moduleNews };
     }
