@@ -8,7 +8,7 @@ import { getApplications } from './src/scrapers/applications';
 
 async function main(): Promise<void> {
     const config = await getConfig();
-    
+
     // Log in and get session ID
     const sessionID = config.sessionID ? config.sessionID : await authenticate(config.domain, config.email, config.password);
     console.log(`Session ID: ${sessionID}`);
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     // Get forums
     if (config.forumModuleIDs && !(config.forumModuleIDs.length === 0)) {
         const forums = await getForums(config.domain, sessionID, config.forumModuleIDs);
-        writeJsonFile('forums.json', forums);
+        writeJsonFile('./target/forums.json', forums);
     } else {
         console.log('No forum module IDs provided, skipping forum scraping.');
     }
@@ -32,7 +32,7 @@ async function main(): Promise<void> {
     // Get news
     if (config.newsModuleIDs && !(config.newsModuleIDs.length === 0)) {
         const news = await getNews(config.domain, sessionID, config.newsModuleIDs);
-        writeJsonFile('news.json', news);
+        writeJsonFile('./target/news.json', news);
     } else {
         console.log('No news module IDs provided, skipping news scraping.');
     }

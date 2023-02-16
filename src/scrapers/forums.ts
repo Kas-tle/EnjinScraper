@@ -99,7 +99,12 @@ async function getThreadContent(domain: string, sessionID: string, threadID: str
 
         const { thread, posts } = data.result;
 
-        threads[thread.thread_id] = { ...thread, posts };
+        if (!threads[thread.thread_id]) {
+            threads[thread.thread_id] = { ...thread, posts };
+        } else {
+            threads[thread.thread_id].posts = [...threads[thread.thread_id].posts, ...posts];
+        }
+        
         totalPages = parseInt(data.result.pages);
         page++;
     } while (page <= totalPages);
