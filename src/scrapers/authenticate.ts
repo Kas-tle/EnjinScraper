@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { EnjinResponse } from '../interfaces';
+import { EnjinResponse } from '../util/interfaces';
 
 export async function authenticate(domain: string, email: string, password: string): Promise<string> {
     const { data } = await axios.post<EnjinResponse<{ session_id: string }>>(
@@ -15,11 +15,15 @@ export async function authenticate(domain: string, email: string, password: stri
         }
     );
 
+    if (data.error) {
+        throw new Error(`Error authenticating: ${data.error.code} ${data.error.message}`);
+    }
+
     return data.result.session_id;
 }
 
 export async function getSiteID(domain: string): Promise<string> {
-    const response = await axios.post<EnjinResponse<{ latest_user: { site_id: string } }>>(
+    const { data } = await axios.post<EnjinResponse<{ latest_user: { site_id: string } }>>(
         `https://${domain}/api/v1/api.php`,
         {
             jsonrpc: '2.0',
@@ -34,6 +38,10 @@ export async function getSiteID(domain: string): Promise<string> {
         }
     );
 
-    const { result } = response.data;
+    if (data.error) {
+        throw new Error(`Error getting site ID: ${data.error.code} ${data.error.message}`);
+    }
+
+    const { result } = data;
     return result.latest_user.site_id;
 }

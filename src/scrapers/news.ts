@@ -1,14 +1,14 @@
 import axios from 'axios';
-import { EnjinResponse } from '../interfaces';
+import { EnjinResponse } from '../util/interfaces';
 
-export async function getNews(domain: string, sessionID: string, newsModuleID: string): Promise<Record<string, any>> {
-    const newsPosts: Record<string, any> = {};
-    let page = 1;
+async function getModuleNews(domain: string, sessionID: string, newsModuleID: string): Promise<Record<string, any>> {
+    let newsPosts: Record<string, any> = {};
     let result: Record<string, any>[] = [];
 
+    let page = 1;
     do {
         const { data } = await axios.post<EnjinResponse<Record<string, any>[]>>(
-            `https://www.${domain}/api/v1/api.php`,
+            `https://${domain}/api/v1/api.php`,
             {
                 jsonrpc: '2.0',
                 id: '1',
@@ -17,6 +17,8 @@ export async function getNews(domain: string, sessionID: string, newsModuleID: s
             },
             { headers: { 'Content-Type': 'application/json' } }
         );
+
+        console.log(JSON.stringify(data, null, 4));
 
         result = data.result;
 
@@ -28,5 +30,16 @@ export async function getNews(domain: string, sessionID: string, newsModuleID: s
         }
     } while (result.length > 0);
 
-    return newsPosts;
+    return { [newsModuleID]: newsPosts };
+}
+
+export async function getNews(domain: string, sessionID: string, newsModuleIDs: string[]): Promise<Record<string, any>> {
+    let allNews: Record<string, any> = {};
+
+    for (const newsModuleID of newsModuleIDs) {
+        const moduleNews = await getModuleNews(domain, sessionID, newsModuleID);
+        allNews = { ...allNews, ...moduleNews };
+    }
+
+    return allNews;
 }

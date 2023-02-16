@@ -84,24 +84,35 @@ async function getTicketModules(domain: string, apiKey: string): Promise<string[
         headers: { 'Content-Type': 'application/json' },
     });
 
+    if (response.data.error) {
+        console.log(`Error getting ticket modules: ${response.data.error.code} ${response.data.error.message}`)
+        return [];
+    }
+
     const data: TicketModulesAPIResponse = response.data;
     return Object.keys(data.result);
 }
 
-async function getModuleTickets(domain: string, sessionID: string, moduleID: string): Promise<Ticket[]> {
+async function getModuleTickets(domain: string, sessionID: string, moduleID: string): Promise<Record<string, Ticket[]>> {
     let page = 1;
     let lastPage = 1;
     const tickets: Ticket[] = [];
 
     while (page <= lastPage) {
+        console.log(`Getting tickets for module ${moduleID} page ${page}...`)
         const response = await axios.post(`https://${domain}/api/v1/api.php`, {
             jsonrpc: '2.0',
             id: '12345',
             method: 'Tickets.getTickets',
-            params: { session_id: sessionID, preset_id: moduleID, page },
+            params: { session_id: sessionID, preset_id: moduleID, status: 'all', page },
         }, {
             headers: { 'Content-Type': 'application/json' },
         });
+
+        if (response.data.error) {
+            console.log(`Error getting tickets for module ${moduleID} page ${page}: ${response.data.error.code} ${response.data.error.message}`)
+            break;
+        }
 
         const data: TicketAPIResponse = response.data;
 
@@ -110,17 +121,22 @@ async function getModuleTickets(domain: string, sessionID: string, moduleID: str
         page++;
     }
 
-    return tickets;
+    return { [moduleID]: tickets };
 }
 
-export async function getAllTickets(domain: string, apiKey: string, sessionID: string): Promise<Ticket[]> {
+export async function getAllTickets(domain: string, apiKey: string, sessionID: string): Promise<Record<string, Ticket[]>> {
+    console.log('Getting all tickets...');
     const modules = await getTicketModules(domain, apiKey);
 
-    const allTickets: Ticket[] = [];
+    console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
+
+    let allTickets: Record<string, Ticket[]> = {};
 
     for (const moduleID of modules) {
+        console.log(`Getting tickets for module ${moduleID}...`);
         const tickets = await getModuleTickets(domain, sessionID, moduleID);
-        allTickets.push(...tickets);
+        console.log(`Found ${tickets[moduleID].length} tickets for module ${moduleID}.`);
+        allTickets = { ...allTickets, ...tickets };
     }
 
     return allTickets;

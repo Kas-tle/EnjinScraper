@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { EnjinResponse } from '../interfaces';
+import { EnjinResponse } from '../util/interfaces';
 
 async function getModuleForumIDs(domain: string, sessionID: string, forumModuleID: string): Promise<string[]> {
     const forumIDs: string[] = [];
@@ -14,6 +14,11 @@ async function getModuleForumIDs(domain: string, sessionID: string, forumModuleI
         },
         { headers: { 'Content-Type': 'application/json' } }
     );
+
+    if (data.error) {
+        console.log(`Error getting forum IDs for forum module ${forumModuleID}: ${data.error.code} ${data.error.message}`)
+        return forumIDs;
+    }
 
     const { categories, subforums } = data.result;
     for (const categoryId in categories) {
@@ -50,6 +55,11 @@ async function getForumThreadIDs(domain: string, sessionID: string, forumID: str
             { headers: { 'Content-Type': 'application/json' } }
         );
 
+        if (data.error) {
+            console.log(`Error getting thread IDs for forum ${forumID}: ${data.error.code} ${data.error.message}`)
+            break;
+        }
+
         const threads = data.result.threads;
         for (const thread of threads) {
             threadIDs.push(thread.thread_id);
@@ -68,6 +78,7 @@ async function getThreadContent(domain: string, sessionID: string, threadID: str
     let totalPages = 1;
 
     do {
+        console.log(`Getting thread ${threadID} page ${page}...`)
         const { data } = await axios.post<EnjinResponse<{
             pages: string; thread: Record<string, any>; posts: Record<string, any>[]
         }>>(
@@ -81,6 +92,11 @@ async function getThreadContent(domain: string, sessionID: string, threadID: str
             { headers: { 'Content-Type': 'application/json' } }
         );
 
+        if (data.error) {
+            console.log(`Error getting thread ${threadID} page ${page}: ${data.error.code} ${data.error.message}`)
+            break;
+        }
+
         const { thread, posts } = data.result;
 
         threads[thread.thread_id] = { ...thread, posts };
@@ -88,6 +104,7 @@ async function getThreadContent(domain: string, sessionID: string, threadID: str
         page++;
     } while (page <= totalPages);
 
+    console.log(`Finished getting all pages for thread ${threadID}.`)
     return threads;
 }
 
@@ -102,16 +119,22 @@ interface ForumContent {
 }
 
 export async function getForums(domain: string, sessionID: string, forumModuleIDs: string[]): Promise<ForumContent> {
+    console.log('Getting forum content...')
     const forumContent: ForumContent = {};
     for (const forumModuleID of forumModuleIDs) {
+        console.log(`Getting forum content for module ${forumModuleID}...`)
         const forumIDs = await getModuleForumIDs(domain, sessionID, forumModuleID);
+        console.log(`Found ${forumIDs.length} forums in module ${forumModuleID}.`)
         const forumModuleContent: { [forumId: string]: Forum } = {};
         for (const forumID of forumIDs) {
+            console.log(`Getting forum content for forum ${forumID}...`)
             const threadIDs = await getForumThreadIDs(domain, sessionID, forumID);
+            console.log(`Found ${threadIDs.length} threads in forum ${forumID}.`)
             const threads: Forum = {};
             for (const threadID of threadIDs) {
+                console.log(`Getting forum content for thread ${threadID}...`)
                 const threadContent = await getThreadContent(domain, sessionID, threadID);
-                Object.assign(threads, threadContent);
+                threads[threadID] = threadContent;
             }
             forumModuleContent[forumID] = threads;
         }
