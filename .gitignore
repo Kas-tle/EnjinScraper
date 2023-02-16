@@ -106,3 +106,4 @@ dist
 # Output
 target/
 config.json
+package-lock.json
