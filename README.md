@@ -77,7 +77,6 @@ The scraper will output a single json file for each module scraped in the `targe
 - [ ] Add support for scraping wikis (https://github.com/Kas-tle/EnjinScraper/issues/5)
 - [ ] Add support for downloading referenced images and attachments (https://github.com/Kas-tle/EnjinScraper/issues/4)
 - [ ] Add more options for user data scraping
-- [ ] Add support for scraping user points
 - [ ] Add support for scraping galleries
 - [ ] Add support for scraping ticket replies (https://github.com/Kas-tle/EnjinScraper/issues/1)
 - [ ] Export to database
