@@ -1,60 +1,13 @@
-import axios from 'axios';
-import { EnjinResponse } from '../util/interfaces';
+import { UserAdmin } from '../interfaces/useradmin';
+import { enjinRequest } from '../util/request';
 
-interface UserTag {
-    tag_id: string;
-    site_id: string;
-    expiry_time: string;
-    tagname: string;
-    numusers: string;
-    visible: string;
-    have_image: string;
-    ordering: string;
-    show_area: string;
-    tag_color: string;
-    tag_color_username: string;
-    tag_url: string;
-    tag_url_newwindow: string;
-    tag_background: string;
-    tag_prefix: string;
-    tag_prefix_color: string;
-    tag_post_color: string;
-    tag_post_opacity: string;
-    tag_post_bg_color: string;
-    tag_background_color: string;
-    microtag_text: string;
-    microtag_text_color: string;
-    microtag_bg_color: string;
-    microtag_bg_style: string;
-    microtag_image: string;
-    microtag_icon: string;
-    tag_forum_title: string;
-    category_id: string | null;
-    award_status: string;
-    award_name: string;
-    award_group: string;
-    award_large_image: string;
-    award_small_image: string;
-    award_large_bg: string;
-    award_display: string;
-    award_description: string;
-    award_sort: string;
-    award_wall_post: string;
-    category_order: string | null;
-    url: string;
-}
 
-async function getUserTags(domain: string, apiKey: string, userID: string): Promise<UserTag[]> {
-    const { data } = await axios.post<EnjinResponse<UserTag[]>>(
-        `https://${domain}/api/v1/api.php`,
-        {
-            jsonrpc: '2.0',
-            id: '12345',
-            method: 'UserAdmin.getUserTags',
-            params: { api_key: apiKey, user_id: userID },
-        },
-        { headers: { 'Content-Type': 'application/json' } }
-    );
+async function getUserTags(domain: string, apiKey: string, userID: string): Promise<UserAdmin.GetUserTags> {
+    const params = {
+        api_key: apiKey,
+        user_id: userID,
+    }
+    const data = await enjinRequest<UserAdmin.GetUserTags>(params, 'UserAdmin.getUserTags', domain);
 
     if (data.error) {
         console.log(`Error getting user tags for user ${userID}: ${data.error.code} ${data.error.message}`);
@@ -63,9 +16,9 @@ async function getUserTags(domain: string, apiKey: string, userID: string): Prom
     return data.result;
 }
 
-export async function getAllUserTags(domain: string, apiKey: string, users: Record<string, any>): Promise<Record<string, UserTag[]>> {
+export async function getAllUserTags(domain: string, apiKey: string, users: Record<string, any>): Promise<Record<string, UserAdmin.GetUserTags>> {
     console.log('Getting all user tags...');
-    let allUserTags: Record<string, UserTag[]> = {};
+    let allUserTags: Record<string, UserAdmin.GetUserTags> = {};
 
     const totalUsers = Object.keys(users).length;
     let userCount = 1;

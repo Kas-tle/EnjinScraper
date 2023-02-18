@@ -49,6 +49,6 @@ export async function getConfig(): Promise<Config> {
     } catch (err) {
         console.error("No config file found, generating default config. Please fill out config.json and run the program again to continue.");
         await fs.promises.writeFile("config.json", JSON.stringify(defaultConfig, null, 4));
-        return defaultConfig;
+        process.exit(1);
     }
 }

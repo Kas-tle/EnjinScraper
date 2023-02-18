@@ -1,19 +1,14 @@
-import axios from 'axios';
-import { EnjinResponse } from '../util/interfaces';
+import { Site } from "../interfaces/site";
+import { User } from "../interfaces/user";
+import { enjinRequest } from '../util/request';
 
 export async function authenticate(domain: string, email: string, password: string): Promise<string> {
-    const { data } = await axios.post<EnjinResponse<{ session_id: string }>>(
-        `https://${domain}/api/v1/api.php`,
-        {
-            jsonrpc: '2.0',
-            id: '1',
-            method: 'User.login',
-            params: { email, password },
-        },
-        {
-            headers: { 'Content-Type': 'application/json' },
-        }
-    );
+    const params = {
+        email,
+        password,
+    }
+
+    const data = await enjinRequest<User.Login>(params, 'User.login', domain);
 
     if (data.error) {
         throw new Error(`Error authenticating: ${data.error.code} ${data.error.message}`);
@@ -23,20 +18,7 @@ export async function authenticate(domain: string, email: string, password: stri
 }
 
 export async function getSiteID(domain: string): Promise<string> {
-    const { data } = await axios.post<EnjinResponse<{ latest_user: { site_id: string } }>>(
-        `https://${domain}/api/v1/api.php`,
-        {
-            jsonrpc: '2.0',
-            id: '12345',
-            params: {},
-            method: 'Site.getStats',
-        },
-        {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }
-    );
+    const data = await enjinRequest<Site.GetStats>({}, 'Site.getStats', domain);
 
     if (data.error) {
         throw new Error(`Error getting site ID: ${data.error.code} ${data.error.message}`);
