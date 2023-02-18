@@ -1,5 +1,5 @@
 import { getConfig } from './src/util/config';
-import { ensureDirectory, writeJsonFile } from './src/util/writer';
+import { ensureDirectory, writeJsonFile } from './src/util/files';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';

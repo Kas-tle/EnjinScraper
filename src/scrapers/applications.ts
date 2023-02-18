@@ -4,7 +4,7 @@ import { Applications } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { enjinRequest } from '../util/request';
-import { writeJsonFile } from '../util/writer';
+import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
     const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
@@ -65,9 +65,9 @@ export async function getApplications(domain: string, sessionID: string, siteID:
     console.log(`Application types: ${applicationTypes.join(', ')}`);
 
     let applicationIDs: string[] = [];
-    if (fs.existsSync(path.join(process.cwd(), './target/recovery/application_ids.json'))) {
+    if (fileExists('./target/recovery/application_ids.json')) {
         console.log('Found recovery file, skipping application ID retrieval.');
-        applicationIDs = JSON.parse(fs.readFileSync(path.join(process.cwd(), './target/recovery/application_ids.json'), 'utf8'));
+        applicationIDs = parseJsonFile('./target/recovery/application_ids.json') as string[];
     } else {
         applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
         writeJsonFile('./target/recovery/application_ids.json', applicationIDs);
@@ -78,9 +78,9 @@ export async function getApplications(domain: string, sessionID: string, siteID:
 
     let currentApplication = 1;
 
-    if (fs.existsSync(path.join(process.cwd(), './target/applications.json'))) {
+    if (fileExists('./target/applications.json')) {
         console.log('Found applications file, starting where we left off.');
-        applications.push(...JSON.parse(fs.readFileSync(path.join(process.cwd(), './target/applications.json'), 'utf8')));
+        applications.push(...parseJsonFile('./target/applications.json') as Applications.GetApplication[]);
         applicationIDs = applicationIDs.filter((id) => !applications.some((application) => application.application_id === id));
         currentApplication = applications.length + 1;
     }

@@ -1,4 +1,4 @@
-import { writeJsonFile } from "./writer";
+import { writeJsonFile } from "./files";
 
 function handleExitSignal(writePath: string, object: Object, exitCode: number) {
     return () => {

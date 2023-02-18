@@ -16,3 +16,11 @@ export async function ensureDirectory(directory: string) {
 export function writeJsonFile(filename: string, data: any): void {
     fs.writeFileSync(path.join(process.cwd(), filename), JSON.stringify(data, null, 4));
 }
+
+export function parseJsonFile(filename: string): object {
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), filename)).toString());
+}
+
+export function fileExists (filename: string): boolean {
+    return fs.existsSync(path.join(process.cwd(), filename));
+}
