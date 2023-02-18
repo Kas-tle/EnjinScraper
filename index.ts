@@ -9,6 +9,10 @@ import { getUsers } from './src/scrapers/users';
 import { getAllUserTags } from './src/scrapers/usertags';
 
 async function main(): Promise<void> {
+    // Needed for exit handler
+    process.stdin.resume();
+
+    // Get config
     const config = await getConfig();
 
     // Log in and get session ID
@@ -19,8 +23,8 @@ async function main(): Promise<void> {
     const siteID = await getSiteID(config.domain);
     console.log(`Site ID: ${siteID}`);
 
-    // Ensure output directory exists
-    ensureDirectory('./target');
+    // Ensure needed directories exist
+    ensureDirectory('./target/recovery');
 
     // Get forums
     if (config.forumModuleIDs && !(config.forumModuleIDs.length === 0) && !config.disabledModules?.forums) {
@@ -45,8 +49,6 @@ async function main(): Promise<void> {
     } else {
         console.log('Tickets module disabled, skipping ticket scraping.');
     }
-
-
 
     // Get applications
     if (!config.disabledModules?.applications) {

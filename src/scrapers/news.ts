@@ -1,23 +1,29 @@
-import axios from 'axios';
-import { EnjinResponse } from '../util/interfaces';
+import { News, NewsArticle } from '../interfaces/news';
+import { enjinRequest } from '../util/request';
 
-async function getModuleNews(domain: string, sessionID: string, newsModuleID: string): Promise<Record<string, any>> {
-    let newsPosts: Record<string, any> = {};
-    let result: Record<string, any>[] = [];
+interface NewsContent {
+    [key: string]: {
+        [key: string]: NewsArticle;
+    }
+}
+interface NewsModule {
+    [key: string]: NewsArticle;
+}
+
+async function getModuleNews(domain: string, sessionID: string, newsModuleID: string): Promise<NewsContent> {
+    let newsPosts: NewsModule = {};
+    let result: News.GetNews = [];
 
     let page = 1;
     do {
         console.log(`Getting news posts for module ${newsModuleID} page ${page}...`);
-        const { data } = await axios.post<EnjinResponse<Record<string, any>[]>>(
-            `https://${domain}/api/v1/api.php`,
-            {
-                jsonrpc: '2.0',
-                id: '1',
-                method: 'News.getNews',
-                params: { preset_id: newsModuleID, session_id: sessionID, page: page.toString() },
-            },
-            { headers: { 'Content-Type': 'application/json' } }
-        );
+
+        const params = {
+            preset_id: newsModuleID,
+            session_id: sessionID,
+            page: page.toString(),
+        };
+        const data = await enjinRequest<News.GetNews>(params, 'News.getNews', domain);
 
         if (data.error) {
             console.log(`Error getting news posts for module ${newsModuleID}: ${data.error.code} ${data.error.message}`)
@@ -37,8 +43,8 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
     return { [newsModuleID]: newsPosts };
 }
 
-export async function getNews(domain: string, sessionID: string, newsModuleIDs: string[]): Promise<Record<string, any>> {
-    let allNews: Record<string, any> = {};
+export async function getNews(domain: string, sessionID: string, newsModuleIDs: string[]): Promise<NewsContent> {
+    let allNews: NewsContent = {};
 
     const totalNewsModules = newsModuleIDs.length;
     let currentNewsModule = 1;

@@ -1,61 +1,13 @@
-import axios from 'axios';
-
-import { EnjinResponse } from '../util/interfaces';
-
-interface EnjinApplicationTypes {
-    [key: string]: string;
-}
-
-interface EnjinApplicationIDs {
-    items:
-    {
-        application_id: string;
-    }[]
-}
-
-interface EnjinApplication {
-    application_id: string;
-    site_id: string;
-    preset_id: string;
-    title: string;
-    user_ip: string;
-    is_mine: boolean;
-    can_manage: boolean;
-    created: string;
-    updated: string;
-    read: boolean;
-    comments: number;
-    app_comments: string;
-    admin_comments: string;
-    site_name: string;
-    user_id: string;
-    is_online: boolean;
-    username: string;
-    avatar: string;
-    admin_user_id: string;
-    admin_online: boolean;
-    admin_username: string;
-    admin_avatar: string;
-    site_logo: string;
-    user_data: {
-        [key: string]: string | number | string[];
-    };
-    is_archived: boolean;
-    is_trashed: boolean;
-    allow_app_comments: string;
-    post_app_comments: boolean;
-    allow_admin_comments: boolean;
-}
+import fs from 'fs';
+import path from 'path';
+import { Applications } from '../interfaces/applications';
+import { getErrorMessage } from '../util/error';
+import { addExitListeners, removeExitListeners } from '../util/exit';
+import { enjinRequest } from '../util/request';
+import { writeJsonFile } from '../util/writer';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
-    const { data } = await axios.post<EnjinResponse<EnjinApplicationTypes>>(`https://${domain}/api/v1/api.php`, {
-        jsonrpc: '2.0',
-        id: '12345',
-        params: {},
-        method: 'Applications.getTypes',
-    }, {
-        headers: { 'Content-Type': 'application/json' },
-    });
+    const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
 
     if (data.error) {
         console.log(`Error getting application types: ${data.error.code} ${data.error.message}`)
@@ -72,72 +24,92 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
 
     await Promise.all(types.map(async (type) => {
         let page = 1;
-        while (true) {
-            console.log(`Getting application IDs for type ${type} page ${page}...`);
-            const { data } = await axios.post<EnjinResponse<EnjinApplicationIDs>>(`https://${domain}/api/v1/api.php`, {
-                jsonrpc: '2.0',
-                id: '12345',
-                params: {
+        try {
+            while (true) {
+                console.log(`Getting application IDs for type ${type} page ${page}...`);
+
+                const params = {
                     session_id: sessionID,
                     type,
                     site_id: siteID,
                     page,
-                },
-                method: 'Applications.getList',
-            }, {
-                headers: { 'Content-Type': 'application/json' },
-            });
+                }
 
-            if (data.error) {
-                console.log(`Error getting application IDs for application type ${type} on page ${page}: ${data.error.code} ${data.error.message}`)
-                break;
-            }
+                const data = await enjinRequest<Applications.GetList>(params, 'Applications.getList', domain);
 
-            const { result } = data;
-            if (result.items.length === 0) {
-                break;
+                if (data.error) {
+                    console.log(`Error getting application IDs for application type ${type} on page ${page}: ${data.error.code} ${data.error.message}`)
+                    break;
+                }
+
+                const { result } = data;
+                if (result.items.length === 0) {
+                    break;
+                }
+                applicationIDs.push(...result.items.map((item: { application_id: string }) => item.application_id));
+                page++;
             }
-            applicationIDs.push(...result.items.map((item: { application_id: string }) => item.application_id));
-            page++;
+        } catch (error) {
+            console.log(`Error getting application IDs: ${getErrorMessage(error)}`);
         }
     }));
 
     return applicationIDs;
 }
 
-export async function getApplications(domain: string, sessionID: string, siteID: string): Promise<EnjinApplication[]> {
+export async function getApplications(domain: string, sessionID: string, siteID: string): Promise<Applications.GetApplication[]> {
     console.log('Getting applications...');
-    const applications: EnjinApplication[] = [];
+    const applications: Applications.GetApplication[] = [];
 
     const applicationTypes = await getApplicationTypes(domain);
     console.log(`Application types: ${applicationTypes.join(', ')}`);
-    const applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
+
+    let applicationIDs: string[] = [];
+    if (fs.existsSync(path.join(process.cwd(), './target/recovery/application_ids.json'))) {
+        console.log('Found recovery file, skipping application ID retrieval.');
+        applicationIDs = JSON.parse(fs.readFileSync(path.join(process.cwd(), './target/recovery/application_ids.json'), 'utf8'));
+    } else {
+        applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
+        writeJsonFile('./target/recovery/application_ids.json', applicationIDs);
+    }
+
     const totalApplications = applicationIDs.length;
     console.log(`Found ${totalApplications} to download.`)
 
     let currentApplication = 1;
-    for (const id of applicationIDs) {
-        console.log(`Getting application ${id}... (${currentApplication++}/${totalApplications})`);
-        const { data } = await axios.post<EnjinResponse<EnjinApplication>>(`https://${domain}/api/v1/api.php`, {
-            jsonrpc: '2.0',
-            id: '12345',
-            params: {
-                session_id: sessionID,
-                application_id: id,
-            },
-            method: 'Applications.getApplication',
-        }, {
-            headers: { 'Content-Type': 'application/json' },
-        });
 
-        if (data.error) {
-            console.log(`Error getting application ${id}: ${data.error.code} ${data.error.message}`)
-            continue;
-        }
-
-        const { result } = data;
-        applications.push(result);
+    if (fs.existsSync(path.join(process.cwd(), './target/applications.json'))) {
+        console.log('Found applications file, starting where we left off.');
+        applications.push(...JSON.parse(fs.readFileSync(path.join(process.cwd(), './target/applications.json'), 'utf8')));
+        applicationIDs = applicationIDs.filter((id) => !applications.some((application) => application.application_id === id));
+        currentApplication = applications.length + 1;
     }
 
+    addExitListeners('./target/applications.json', applications);
+
+    try {
+        for (const id of applicationIDs) {
+            console.log(`Getting application ${id}... (${currentApplication++}/${totalApplications})`);
+
+            const params = {
+                session_id: sessionID,
+                application_id: id,
+            }
+
+            const data = await enjinRequest<Applications.GetApplication>(params, 'Applications.getApplication', domain);
+
+            if (data.error) {
+                console.log(`Error getting application ${id}: ${data.error.code} ${data.error.message}`)
+                continue;
+            }
+
+            const { result } = data;
+            applications.push(result);
+        }
+    } catch (error) {
+        console.log(`Error getting applications: ${getErrorMessage(error)}`);
+    }
+
+    removeExitListeners();
     return applications;
 }
