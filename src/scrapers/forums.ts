@@ -1,10 +1,10 @@
 import { Forum, ThreadPosts } from '../interfaces/forum';
 import { addExitListeners, removeExitListeners } from '../util/exit';
-import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
+import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
 
-async function getModuleForumIDs(domain: string, sessionID: string, forumModuleID: string): Promise<string[]> {
-    const forumIDs: string[] = [];
+async function getModuleForumIDs(domain: string, sessionID: string, forumModuleID: string): Promise<string[][]> {
+    const forumIDs: string[][] = [];
 
     const params = {
         preset_id: forumModuleID,
@@ -22,41 +22,41 @@ async function getModuleForumIDs(domain: string, sessionID: string, forumModuleI
     for (const categoryId in categories) {
         const category = categories[categoryId];
         for (const forumId in category) {
-            forumIDs.push(category[forumId].forum_id);
+            forumIDs.push([forumModuleID, category[forumId].forum_id]);
         }
     }
 
     for (const forumId in subforums) {
         const subforum = subforums[forumId];
         for (const sforum of subforum) {
-            forumIDs.push(sforum.forum_id);
+            forumIDs.push([forumModuleID, sforum.forum_id]);
         }
     }
 
     return forumIDs;
 }
 
-async function getForumThreadIDs(domain: string, sessionID: string, forumID: string): Promise<string[]> {
-    const threadIDs: string[] = [];
+async function getForumThreadIDs(domain: string, sessionID: string, forumID: string[]): Promise<string[][]> {
+    const threadIDs: string[][] = [];
     let page = 1;
     let totalPages = 1;
 
     do {
         const params = {
-            forum_id: forumID,
+            forum_id: forumID[1],
             session_id: sessionID,
             page: page.toString(),
         }
         const data = await enjinRequest<Forum.GetForum>(params, 'Forum.getForum', domain);
 
         if (data.error) {
-            console.log(`Error getting thread IDs for forum ${forumID}: ${data.error.code} ${data.error.message}`)
+            console.log(`Error getting thread IDs for forum ${forumID[1]}: ${data.error.code} ${data.error.message}`)
             break;
         }
 
         const threads = data.result.threads;
         for (const thread of threads) {
-            threadIDs.push(thread.thread_id);
+            threadIDs.push([forumID[0], forumID[1], thread.thread_id]);
         }
 
         totalPages = data.result.pages;
@@ -66,22 +66,22 @@ async function getForumThreadIDs(domain: string, sessionID: string, forumID: str
     return threadIDs;
 }
 
-async function getThreadContent(domain: string, sessionID: string, threadID: string): Promise<Record<string, ThreadPosts>> {
+async function getThreadContent(domain: string, sessionID: string, threadID: string[]): Promise<Record<string, ThreadPosts>> {
     const threads: Record<string, ThreadPosts> = {};
     let page = 1;
     let totalPages = 1;
 
     do {
-        console.log(`Getting thread ${threadID} page ${page}...`)
+        console.log(`Getting thread ${threadID[2]} page ${page}...`)
         const params = {
-            thread_id: threadID,
+            thread_id: threadID[2],
             session_id: sessionID,
             page: page.toString(),
         }
         const data = await enjinRequest<Forum.GetThread>(params, 'Forum.getThread', domain);
 
         if (data.error) {
-            console.log(`Error getting thread ${threadID} page ${page}: ${data.error.code} ${data.error.message}`)
+            console.log(`Error getting thread ${threadID[2]} page ${page}: ${data.error.code} ${data.error.message}`)
             break;
         }
 
@@ -92,12 +92,12 @@ async function getThreadContent(domain: string, sessionID: string, threadID: str
         } else {
             threads[thread.thread_id].posts = [...threads[thread.thread_id].posts, ...posts];
         }
-        
+
         totalPages = data.result.pages;
         page++;
     } while (page <= totalPages);
 
-    console.log(`Finished getting all pages for thread ${threadID}.`)
+    console.log(`Finished getting all pages for thread ${threadID[2]}.`)
     return threads;
 }
 
@@ -112,81 +112,71 @@ interface ForumContent {
 export async function getForums(domain: string, sessionID: string, forumModuleIDs: string[]): Promise<ForumContent> {
     console.log('Getting forum content...')
     let forumContent: ForumContent = {};
-    addExitListeners('./target/forums.json', forumContent);
+    let forumIDs: string[][] = [];
+    let threadIDs: string[][] = [];
+    let moduleCount = [0];
+    let forumCount = [0];
+    let threadCount = [0];
+
+    if (fileExists('./target/recovery/forum_progress.json')) {
+        console.log('Recovering from previous session...')
+        const progress = parseJsonFile('./target/recovery/forum_progress.json') as (string | number)[][];
+
+        forumModuleIDs = progress[0] as string[];
+        moduleCount[0] = progress[3][0] as number;
+
+        forumCount[0] = progress[4][0] as number;
+        forumIDs = progress[1] as unknown as string[][];
+
+        threadCount[0] = progress[5][0] as number;
+        threadIDs = progress[2] as unknown as string[][];
+
+        if (fileExists('./target/recovery/forums.json')) {
+            console.log('Recovering forum content from previous session...')
+            forumContent = parseJsonFile('./target/recovery/forums.json') as ForumContent;
+        }
+    }
+    console.log(`Starting at... Module count: ${moduleCount[0]} Forum count: ${forumCount[0]} Thread count: ${threadCount[0]}`)
+
+    addExitListeners(
+        ['./target/recovery/forums.json', './target/recovery/forum_progress.json'],
+        [forumContent, [forumModuleIDs, forumIDs, threadIDs, moduleCount, forumCount, threadCount]]
+    );
 
     const totalModules = forumModuleIDs.length;
-    let moduleCount = 1;
-    let lastForumIDIndex = 0;
-    let lastThreadIDIndex = 0;
 
+    for (let i = moduleCount[0]; i < totalModules; i++) {
+        const moduleForumIDs = await getModuleForumIDs(domain, sessionID, forumModuleIDs[i]);
+        forumIDs.push(...moduleForumIDs);
 
-    let forumRecoveryMode = false;
-    let threadRecoveryMode = false;
-    if (fileExists('./target/forums.json')) {
-        forumRecoveryMode = true;
-        threadRecoveryMode = true;
-        const recoveredForumContent = parseJsonFile('./target/forums.json') as ForumContent;
-        forumContent= recoveredForumContent;
-        const forumModuleKeys = Object.keys(forumContent);
-        const lastForumModuleIndex = forumModuleKeys.length - 1;
-        const lastForumID = forumModuleKeys[lastForumModuleIndex];
-        const forumIDKeys = Object.keys(forumContent[lastForumID]);
-        lastForumIDIndex = forumIDKeys.length - 1;
-        const lastThreadID = forumContent[lastForumID][forumIDKeys[lastForumIDIndex]];
-        const threadIDKeys = Object.keys(lastThreadID);
-        lastThreadIDIndex = threadIDKeys.length - 1;
-
-        forumModuleIDs = forumModuleIDs.slice(lastForumModuleIndex);
-        moduleCount = lastForumModuleIndex + 1;
+        console.log(`Found ${moduleForumIDs.length} forums in module ${forumModuleIDs[i]}... (${++moduleCount[0]}/${totalModules})`)
     }
 
-    for (const forumModuleID of forumModuleIDs) {
-        console.log(`Getting forum content for module ${forumModuleID}... (${moduleCount}/${totalModules})`)
+    const totalForums = forumIDs.length;
 
-        let forumCount = 1;
-        let forumIDs = await getModuleForumIDs(domain, sessionID, forumModuleID);
-        const totalForums = forumIDs.length;
+    for (let i = forumCount[0]; i < totalForums; i++) {
+        const moduleThreadIDs = await getForumThreadIDs(domain, sessionID, forumIDs[i]);
+        threadIDs.push(...moduleThreadIDs);
 
-        if (forumRecoveryMode) {
-            forumIDs = forumIDs.slice(lastForumIDIndex);
-            forumCount = lastForumIDIndex + 1;
-            forumRecoveryMode = false;
-        }
+        console.log(`Found ${moduleThreadIDs.length} threads in forum ${forumIDs[i][1]}... (${++forumCount[0]}/${totalForums})`)
+    }
 
-        console.log(`Found ${forumIDs.length} forums in module ${forumModuleID}.`)
-        const forumModuleContent: { 
-            [forumId: string]: {
-                [threadID: string]: ThreadPosts
-            } 
-        } = {};
+    let threads: {
+        [threadID: string]: ThreadPosts
+    } = {};
+    const totalThreads = threadIDs.length;
 
-        for (const forumID of forumIDs) {
-            console.log(`Getting forum content for forum ${forumID}... (${forumCount}/${totalForums})`)
-            let threadIDs = await getForumThreadIDs(domain, sessionID, forumID);
-
-            console.log(`Found ${threadIDs.length} threads in forum ${forumID}.`)
-            let threads: {
-                [threadID: string]: ThreadPosts
-            } = {};
-            const totalThreads = threadIDs.length;
-            let threadCount = 1;
-
-            if (threadRecoveryMode) {
-                threadIDs = threadIDs.slice(lastThreadIDIndex);
-                threadCount = lastThreadIDIndex + 1;
-                threadRecoveryMode = false;
+    for (let i = threadCount[0]; i < totalThreads; i++) {
+        const threadContent = await getThreadContent(domain, sessionID, threadIDs[i]);
+        forumContent[threadIDs[i][0]] = {
+            ...forumContent[threadIDs[i][0]],
+            [threadIDs[i][1]]: {
+                ...forumContent[threadIDs[i][0]][threadIDs[i][1]],
+                ...threads,
+                ...threadContent
             }
-
-            for (const threadID of threadIDs) {
-                console.log(`Getting forum content for thread ${threadID}... (${threadCount++}/${totalThreads}) [Forum (${forumCount}/${totalForums})] [Module (${moduleCount}/${totalModules})]`)
-                const threadContent = await getThreadContent(domain, sessionID, threadID);
-                threads = {...threads, ...threadContent};
-                forumModuleContent[forumID] = threads;
-                forumContent[forumModuleID] = forumModuleContent;
-            }
-            forumCount++;
-        }
-        moduleCount++;
+        };
+        console.log(`Found all forum content for thread ${threadIDs[i][2]}... (${++threadCount[0]}/${totalThreads})`)
     }
 
     removeExitListeners();

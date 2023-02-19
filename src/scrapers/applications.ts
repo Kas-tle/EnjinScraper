@@ -65,12 +65,12 @@ export async function getApplications(domain: string, sessionID: string, siteID:
     console.log(`Application types: ${applicationTypes.join(', ')}`);
 
     let applicationIDs: string[] = [];
-    if (fileExists('./target/recovery/application_ids.json')) {
+    if (fileExists('./target/recovery/application_progress.json')) {
         console.log('Found recovery file, skipping application ID retrieval.');
-        applicationIDs = parseJsonFile('./target/recovery/application_ids.json') as string[];
+        applicationIDs = parseJsonFile('./target/recovery/application_progress.json') as string[];
     } else {
         applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
-        writeJsonFile('./target/recovery/application_ids.json', applicationIDs);
+        writeJsonFile('./target/recovery/application_progress.json', applicationIDs);
     }
 
     const totalApplications = applicationIDs.length;
@@ -78,14 +78,14 @@ export async function getApplications(domain: string, sessionID: string, siteID:
 
     let currentApplication = 1;
 
-    if (fileExists('./target/applications.json')) {
-        console.log('Found applications file, starting where we left off.');
-        applications.push(...parseJsonFile('./target/applications.json') as Applications.GetApplication[]);
+    if (fileExists('./target/recovery/applications.json')) {
+        console.log('Found recovery applications file, starting where we left off.');
+        applications.push(...parseJsonFile('./target/recovery/applications.json') as Applications.GetApplication[]);
         applicationIDs = applicationIDs.filter((id) => !applications.some((application) => application.application_id === id));
         currentApplication = applications.length + 1;
     }
 
-    addExitListeners('./target/applications.json', applications);
+    addExitListeners(['./target/recovery/applications.json'], [applications]);
 
     try {
         for (const id of applicationIDs) {
