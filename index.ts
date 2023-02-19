@@ -1,5 +1,5 @@
 import { getConfig } from './src/util/config';
-import { ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
+import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
@@ -36,6 +36,7 @@ async function main(): Promise<void> {
     } else {
         const forums = await getForums(config.domain, sessionID, config.forumModuleIDs);
         writeJsonFile('./target/forums.json', forums);
+        deleteFiles(['./target/recovery/forums.json', './target/recovery/forum_progress.json']);
     }
 
     // Get news
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
     } else {
         const tickets = await getAllTickets(config.domain, config.apiKey, sessionID);
         writeJsonFile('./target/tickets.json', tickets);
+        deleteFiles(['./target/recovery/module_tickets.json']);
     }
 
     // Get applications
@@ -68,6 +70,7 @@ async function main(): Promise<void> {
     } else {
         const applications = await getApplications(config.domain, sessionID, siteID);
         writeJsonFile('./target/applications.json', applications);
+        deleteFiles(['./target/recovery/applications.json']);
     }
 
     // Get users

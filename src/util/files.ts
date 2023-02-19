@@ -21,6 +21,18 @@ export function parseJsonFile(filename: string): object {
     return JSON.parse(fs.readFileSync(path.join(process.cwd(), filename)).toString());
 }
 
-export function fileExists (filename: string): boolean {
+export function fileExists(filename: string): boolean {
     return fs.existsSync(path.join(process.cwd(), filename));
+}
+
+export function deleteFiles(filePaths: string[]): void {
+    filePaths.forEach(filePath => {
+        try {
+            fs.unlinkSync(filePath);
+        } catch (error: any) {
+            if (error.code !== 'ENOENT') {
+                console.error(`Failed to delete file ${filePath}: ${error}`);
+            }
+        }
+    });
 }

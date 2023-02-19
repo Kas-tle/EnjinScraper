@@ -56,7 +56,7 @@ async function getTicketsByModule(domain: string, sessionID: string, modules: st
             lastPage[0] = data.result.pagination.last_page;
             tickets.push(...data.result.results);
             
-            console.log(`Found tickets for module ${modules[i]} page ${page[0]++}...`);
+            console.log(`Found tickets for module ${modules[i]} page (${page[0]++}/${lastPage})...`);
         }
         page[0] = 1;
         allTickets[0] = { ...allTickets[0], ...{ [modules[i]]: tickets } };
@@ -76,5 +76,19 @@ export async function getAllTickets(domain: string, apiKey: string, sessionID: s
 
     const allTickets = await getTicketsByModule(domain, sessionID, modules);
 
+    // addExitListeners(['./target/recovery/tickets.json'], [allTickets]);
+
+
+    // const ticketCodes: string[] = Object.values(allTickets).flatMap(tickets => tickets.map(ticket => ticket.code));
+    // const ticketCodesLength = ticketCodes.length;
+    // const ticketCodesCount = [0];
+
+    // for (const ticketCode of ticketCodes) {
+        
+        
+    //     console.log(`Found all replies for ticket ${ticketID}...`); 
+    // }
+
+    // removeExitListeners();
     return allTickets;
 }
