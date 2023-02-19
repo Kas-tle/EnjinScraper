@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { Applications } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';

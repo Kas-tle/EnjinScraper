@@ -3,7 +3,7 @@ import { enjinRequest } from '../util/request';
 
 export async function getUsers(domain: string, apiKey: string): Promise<Record<string, UserAdminUser>> {
     console.log('Getting all users...');
-    let result: Record<string, any> = {};
+    let result: UserAdmin.Get = {};
     const users: Record<string, UserAdminUser> = {};
     let page = 1;
 
@@ -23,7 +23,7 @@ export async function getUsers(domain: string, apiKey: string): Promise<Record<s
             break;
         }
 
-        const result = data.result;
+        result = data.result;
 
         if (Object.keys(result).length > 0) {
             Object.keys(result).forEach((userID) => {
