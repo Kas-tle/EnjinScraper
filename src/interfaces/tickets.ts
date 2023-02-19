@@ -8,6 +8,11 @@ export namespace Tickets {
     export interface GetModules {
         [key: string]: TicketModule;
     }
+    export interface GetReplies {
+        results: TicketReply[];
+        pagination: Pagination;
+        has_uploads: boolean;
+    }
 }
 
 export interface Ticket {
@@ -59,4 +64,18 @@ export interface TicketModule {
         condition_qualify: string;
         system: string;
     }[];
+}
+
+export interface TicketReply {
+    id: string;
+    preset_id: string;
+    sent: string;
+    text: string;
+    user_id: string;
+    mode: string;
+    origin: string;
+    agent: string;
+    userHTML: string;
+    createdHTML: string;
+    username: string;
 }

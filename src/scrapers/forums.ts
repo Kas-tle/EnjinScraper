@@ -114,9 +114,9 @@ export async function getForums(domain: string, sessionID: string, forumModuleID
     let forumContent: ForumContent = {};
     let forumIDs: string[][] = [];
     let threadIDs: string[][] = [];
-    let moduleCount = [0];
-    let forumCount = [0];
-    let threadCount = [0];
+    const moduleCount = [0];
+    const forumCount = [0];
+    const threadCount = [0];
 
     if (fileExists('./target/recovery/forum_progress.json')) {
         console.log('Recovering from previous session...')

@@ -1,4 +1,6 @@
 import { Ticket, Tickets } from '../interfaces/tickets';
+import { addExitListeners, removeExitListeners } from '../util/exit';
+import { fileExists } from '../util/files';
 import { enjinRequest } from '../util/request';
 
 async function getTicketModules(domain: string, apiKey: string): Promise<string[]> {
@@ -15,33 +17,55 @@ async function getTicketModules(domain: string, apiKey: string): Promise<string[
     return Object.keys(data.result);
 }
 
-async function getModuleTickets(domain: string, sessionID: string, moduleID: string): Promise<Record<string, Ticket[]>> {
-    let page = 1;
-    let lastPage = 1;
-    const tickets: Ticket[] = [];
+async function getTicketsByModule(domain: string, sessionID: string, modules: string[]): Promise<Record<string, Ticket[]>> {
+    const moduleCount = [0];
+    let totalModules = modules.length;
+    let page = [1];
+    let lastPage = [1];
+    let tickets: Ticket[] = [];
+    let allTickets: Record<string, Ticket[]>[] = [];
 
-    while (page <= lastPage) {
-        console.log(`Getting tickets for module ${moduleID} page ${page}...`)
-
-        const params = {
-            session_id: sessionID,
-            preset_id: moduleID,
-            status: 'all',
-            page,
-        }
-        const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
-
-        if (data.error) {
-            console.log(`Error getting tickets for module ${moduleID} page ${page}: ${data.error.code} ${data.error.message}`)
-            break;
-        }
-
-        tickets.push(...data.result.results);
-        lastPage = data.result.pagination.last_page;
-        page++;
+    if (fileExists('./target/recovery/module_tickets.json')) {
+        const progress = require('../../target/recovery/module_tickets.json') as [Record<string, Ticket[]>[], Ticket[], string[], number[], number[], number[]];
+        allTickets = progress[0];
+        tickets = progress[1];
+        modules = progress[2];
+        totalModules = modules.length;
+        moduleCount[0] = progress[3][0];
+        page[0] = progress[4][0];
+        lastPage[0] = progress[5][0];
     }
 
-    return { [moduleID]: tickets };
+    addExitListeners(['./target/recovery/module_tickets.json'], [[allTickets, tickets, modules, moduleCount, page, lastPage]]);
+
+    for (let i = moduleCount[0]; i < totalModules; i++) {
+        while (page[0] <= lastPage[0]) {
+            const params = {
+                session_id: sessionID,
+                preset_id: modules[i],
+                status: 'all',
+                page: page[0],
+            }
+            const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
+
+            if (data.error) {
+                console.log(`Error getting tickets for module ${modules[i]} page ${page[0]}: ${data.error.code} ${data.error.message}`)
+                break;
+            }
+
+            lastPage[0] = data.result.pagination.last_page;
+            tickets.push(...data.result.results);
+            
+            console.log(`Found tickets for module ${modules[i]} page ${page[0]++}...`);
+        }
+        page[0] = 1;
+        allTickets[0] = { ...allTickets[0], ...{ [modules[i]]: tickets } };
+        console.log(`Found ${tickets.length} tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules}))`);
+        tickets = [];
+    }
+
+    removeExitListeners();
+    return allTickets[0];
 }
 
 export async function getAllTickets(domain: string, apiKey: string, sessionID: string): Promise<Record<string, Ticket[]>> {
@@ -50,14 +74,7 @@ export async function getAllTickets(domain: string, apiKey: string, sessionID: s
 
     console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
 
-    let allTickets: Record<string, Ticket[]> = {};
-
-    for (const moduleID of modules) {
-        console.log(`Getting tickets for module ${moduleID}...`);
-        const tickets = await getModuleTickets(domain, sessionID, moduleID);
-        console.log(`Found ${tickets[moduleID].length} tickets for module ${moduleID}.`);
-        allTickets = { ...allTickets, ...tickets };
-    }
+    const allTickets = await getTicketsByModule(domain, sessionID, modules);
 
     return allTickets;
 }
