@@ -22,5 +22,8 @@ function toErrorWithMessage(maybeError: unknown): ErrorWithMessage {
 }
 
 export function getErrorMessage(error: unknown) {
-    return toErrorWithMessage(error).message
+    const errorWithMessage = toErrorWithMessage(error)
+    const message = errorWithMessage.message
+    const stack = (errorWithMessage instanceof Error) ? errorWithMessage.stack : undefined
+    return stack ? `${message}\n${stack}` : message
 }

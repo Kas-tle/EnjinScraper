@@ -1,5 +1,6 @@
-import fs, { promises } from 'fs';
+import fs, { promises, createWriteStream } from 'fs';
 import path from 'path';
+import { getErrorMessage } from './error';
 
 export async function ensureDirectory(directory: string) {
     try {
@@ -14,7 +15,22 @@ export async function ensureDirectory(directory: string) {
 }
 
 export function writeJsonFile(filename: string, data: any): void {
-    fs.writeFileSync(path.join(process.cwd(), filename), JSON.stringify(data, null, 4));
+    try {
+        const filePath = path.join(process.cwd(), filename);
+        const dirPath = path.dirname(filePath);
+
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 4));
+    } catch (error) {
+        console.error(`Failed to write file ${filename}: ${getErrorMessage(error)}`);
+        if (error instanceof RangeError) {
+            console.log('Yeahhhhhhh we should reallly use SQLite or something');
+
+        }
+    }
 }
 
 export function parseJsonFile(filename: string): object {

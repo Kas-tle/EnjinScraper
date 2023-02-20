@@ -16,6 +16,7 @@ interface Config {
         users?: boolean;
         usertags?: boolean;
     };
+    debug?: boolean;
 }
 
 const defaultConfig: Config = {
@@ -39,13 +40,21 @@ const defaultConfig: Config = {
         applications: false,
         users: false,
         usertags: true
-    }
+    },
+    debug: false
 };
 
+let cachedConfig: Config | null = null;
+
 export async function getConfig(): Promise<Config> {
+    if (cachedConfig) {
+        return cachedConfig;
+    }
     try {
         const configData = await fs.promises.readFile("config.json", "utf-8");
-        return JSON.parse(configData);
+        const config = JSON.parse(configData);
+        cachedConfig = config;
+        return config;
     } catch (err) {
         console.error("No config file found, generating default config. Please fill out config.json and run the program again to continue.");
         await fs.promises.writeFile("config.json", JSON.stringify(defaultConfig, null, 4));
