@@ -59,7 +59,7 @@ async function main(): Promise<void> {
     } else {
         const tickets = await getAllTickets(config.domain, config.apiKey, sessionID);
         writeJsonFile('./target/tickets.json', tickets);
-        deleteFiles(['./target/recovery/module_tickets.json']);
+        deleteFiles(['./target/recovery/module_tickets.json', './target/recovery/tickets.json']);
     }
 
     // Get applications
