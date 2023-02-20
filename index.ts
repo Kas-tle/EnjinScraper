@@ -17,7 +17,7 @@ async function main(): Promise<void> {
 
     // Log in and get session ID
     const sessionID = config.sessionID ? config.sessionID : await authenticate(config.domain, config.email, config.password);
-    console.log(`Session ID: ${sessionID}`);
+    //console.log(`Session ID: ${sessionID}`);
 
     // Get site ID
     const siteID = await getSiteID(config.domain);
@@ -91,6 +91,7 @@ async function main(): Promise<void> {
     } else {
         const userTags = await getAllUserTags(config.domain, config.apiKey);
         writeJsonFile('./target/usertags.json', userTags);
+        deleteFiles(['./target/recovery/usertags.json']);
     }
 
     process.kill(process.pid, 'SIGINT');

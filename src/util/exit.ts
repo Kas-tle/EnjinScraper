@@ -2,7 +2,7 @@ import { writeJsonFile } from "./files";
 
 function handleExitSignal(writePath: string[], object: Object[], exitCode: number) {
     return () => {
-        console.log(`Exit signal received, writing current object to file...`);
+        console.log(`Exit signal ${exitCode} received, writing current object to file...`);
         for (let i = 0; i < writePath.length; i++) {
             writeJsonFile(writePath[i], object[i]);
         }

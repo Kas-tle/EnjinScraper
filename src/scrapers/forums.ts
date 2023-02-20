@@ -1,4 +1,5 @@
 import { Forum, ThreadPosts } from '../interfaces/forum';
+import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
@@ -114,9 +115,9 @@ export async function getForums(domain: string, sessionID: string, forumModuleID
     let forumContent: ForumContent = {};
     let forumIDs: string[][] = [];
     let threadIDs: string[][] = [];
-    const moduleCount = [0];
-    const forumCount = [0];
-    const threadCount = [0];
+    let moduleCount = [0];
+    let forumCount = [0];
+    let threadCount = [0];
 
     if (fileExists('./target/recovery/forum_progress.json')) {
         console.log('Recovering from previous session...')
@@ -166,16 +167,19 @@ export async function getForums(domain: string, sessionID: string, forumModuleID
     } = {};
     const totalThreads = threadIDs.length;
 
+    const forumModuleContent: {
+        [forumId: string]: {
+            [threadID: string]: ThreadPosts
+        }
+    } = {};
+
     for (let i = threadCount[0]; i < totalThreads; i++) {
         const threadContent = await getThreadContent(domain, sessionID, threadIDs[i]);
-        forumContent[threadIDs[i][0]] = {
-            ...forumContent[threadIDs[i][0]],
-            [threadIDs[i][1]]: {
-                ...forumContent[threadIDs[i][0]][threadIDs[i][1]],
-                ...threads,
-                ...threadContent
-            }
-        };
+        
+        threads = { ...threads, ...threadContent };
+        forumModuleContent[threadIDs[i][1]] = { ...forumModuleContent[threadIDs[i][1]], ...threads };
+        forumContent[threadIDs[i][0]] = { ...forumContent[threadIDs[i][0]], ...forumModuleContent };
+
         console.log(`Found all forum content for thread ${threadIDs[i][2]}... (${++threadCount[0]}/${totalThreads})`)
     }
 
