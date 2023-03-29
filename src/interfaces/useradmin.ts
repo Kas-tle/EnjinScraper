@@ -14,16 +14,16 @@ export interface UserAdminUser {
     forum_votes: string;
     lastseen: string;
     datejoined: string;
-    points_total: any;
-    points_day: any;
-    points_week: any;
-    points_month: any;
-    points_forum: any;
-    points_purchase: any;
-    points_other: any;
-    points_spent: any;
-    points_decayed: any;
-    points_adjusted: any;
+    points_total: string;
+    points_day: string;
+    points_week: string;
+    points_month: string;
+    points_forum: string;
+    points_purchase: string;
+    points_other: string;
+    points_spent: string;
+    points_decayed: string;
+    points_adjusted: string;
 }
 
 export interface UserAdminTag {

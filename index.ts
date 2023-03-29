@@ -1,5 +1,7 @@
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
+import { databaseConnection, initializeTables } from './src/util/database';
+import { tableSchemas } from './src/util/tables';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
@@ -25,6 +27,12 @@ async function main(): Promise<void> {
 
     // Ensure needed directories exist
     ensureDirectory('./target/recovery');
+
+    // Initialize database tables
+    const database = await databaseConnection();
+    await initializeTables(database, tableSchemas);
+
+    //process.kill(process.pid, 'SIGINT');
 
     // Get forums
     if (!config.forumModuleIDs || config.forumModuleIDs.length === 0) {
