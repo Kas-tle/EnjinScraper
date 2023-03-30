@@ -1,6 +1,6 @@
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
-import { databaseConnection, initializeTables, queryNewsTable } from './src/util/database';
+import { databaseConnection, initializeTables, queryApplicationsTable, queryNewsTable } from './src/util/database';
 import { tableSchemas } from './src/util/tables';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
@@ -78,8 +78,9 @@ async function main(): Promise<void> {
     } else if (fileExists('./target/applications.json')) {
         console.log('Applications already scraped, skipping application scraping...');
     } else {
-        const applications = await getApplications(config.domain, sessionID, siteID);
-        writeJsonFile('./target/applications.json', applications);
+        const applications = await getApplications(database, config.domain, sessionID, siteID);
+        await queryApplicationsTable(database);
+        // writeJsonFile('./target/applications.json', applications);
         deleteFiles(['./target/recovery/applications.json']);
     }
 
