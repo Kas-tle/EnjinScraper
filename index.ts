@@ -9,6 +9,7 @@ import { getAllTickets } from './src/scrapers/tickets';
 import { getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
 import { getAllUserTags } from './src/scrapers/usertags';
+import { queryUsersTable } from './src/util/database';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -87,8 +88,9 @@ async function main(): Promise<void> {
     } else if (fileExists('./target/users.json')) {
         console.log('Users already scraped, skipping user tag scraping...');
     } else {
-        const users = await getUsers(config.domain, config.apiKey);
-        writeJsonFile('./target/users.json', users);
+        const users = await getUsers(database, config.domain, config.apiKey);
+        await queryUsersTable(database);
+        // writeJsonFile('./target/users.json', users);
     }
 
     // Get user tags

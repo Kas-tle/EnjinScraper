@@ -264,8 +264,7 @@ export const tableSchemas: TableSchema[] = [
             points_other TEXT,
             points_spent TEXT,
             points_decayed TEXT,
-            points_adjusted TEXT,
-            tags JSON
+            points_adjusted TEXT
         )`,
     },
 ];

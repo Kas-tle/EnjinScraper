@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 import { Database } from 'sqlite3';
 import { TableSchema } from '../interfaces/tableschema';
+import { UserAdminUser } from '../interfaces/useradmin';
 
 let database: any = null;
 
@@ -41,3 +42,34 @@ export async function initializeTables(database: Database, tables: TableSchema[]
     await createTable(table);
   }
 }
+
+export async function insertUsersTable(database: Database, user_id: String, user: UserAdminUser): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const statement = database.prepare('INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+statement.run(user_id, user.username, user.forum_post_count, user.forum_votes, user.lastseen, user.datejoined, user.points_total, user.points_day, user.points_week, user.points_month, user.points_forum, user.points_purchase, user.points_other, user.points_spent, user.points_decayed, user.points_adjusted, (err: { message: any; }) => {
+  if (err) {
+    console.error(`Error inserting into table users with user_id ${user_id}, ${user}:`, err.message);
+    reject(err);
+  } else {
+    console.log(`Inserted ${user_id} into users successfully.`);
+    resolve();
+  }
+});
+
+  });
+}
+
+export async function queryUsersTable(database: Database): Promise<void> {
+  return new Promise((resolve, reject) => {
+    database.all(`SELECT * FROM users`, (err: Error | null, rows: any[]) => {
+      if (err) {
+        console.error(`Error querying table users:`, err.message);
+        reject();
+      } else {
+        console.log(rows);
+        resolve();
+      }
+    });
+  });
+}
+
