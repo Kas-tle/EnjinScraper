@@ -1,6 +1,6 @@
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
-import { databaseConnection, initializeTables } from './src/util/database';
+import { databaseConnection, initializeTables, queryNewsTable } from './src/util/database';
 import { tableSchemas } from './src/util/tables';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
@@ -56,8 +56,9 @@ async function main(): Promise<void> {
     } else if (fileExists('./target/news.json')) {
         console.log('News already scraped, skipping news scraping...');
     } else {
-        const news = await getNews(config.domain, sessionID, config.newsModuleIDs);
-        writeJsonFile('./target/news.json', news);
+        const news = await getNews(database, config.domain, sessionID, config.newsModuleIDs);
+        await queryNewsTable(database);
+        // writeJsonFile('./target/news.json', news);
     }
 
     // Get tickets
