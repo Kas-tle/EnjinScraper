@@ -241,7 +241,13 @@ export const tableSchemas: TableSchema[] = [
             admin_user_id TEXT,
             admin_username TEXT,
             admin_avatar TEXT,
-            site_logo TEXT
+            site_logo TEXT,
+            user_data JSON,
+            is_archived BOOLEAN,
+            is_trashed BOOLEAN,
+            allow_app_comments STRING,
+            post_app_comments BOOLEAN,
+            allow_admin_comments BOOLEAN
         )`,
     },
 
