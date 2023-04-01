@@ -1,7 +1,6 @@
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
-import { databaseConnection, initializeTables, queryApplicationsTable, queryNewsTable } from './src/util/database';
-import { tableSchemas } from './src/util/tables';
+import { databaseConnection, initializeTables, insertRow, isModuleScraped } from './src/util/database';
 import { authenticate, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
@@ -9,7 +8,7 @@ import { getAllTickets } from './src/scrapers/tickets';
 import { getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
 import { getAllUserTags } from './src/scrapers/usertags';
-import { queryUsersTable } from './src/util/database';
+import { queryTable } from './src/util/database';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -31,7 +30,7 @@ async function main(): Promise<void> {
 
     // Initialize database tables
     const database = await databaseConnection();
-    await initializeTables(database, tableSchemas);
+    await initializeTables(database);
 
     //process.kill(process.pid, 'SIGINT');
 
@@ -53,12 +52,12 @@ async function main(): Promise<void> {
         console.log('No news module IDs provided, skipping news scraping...');
     } else if (config.disabledModules?.news) {
         console.log('News module disabled, skipping news scraping...');
-    } else if (fileExists('./target/news.json')) {
+    } else if (await isModuleScraped(database, 'news')) {
         console.log('News already scraped, skipping news scraping...');
     } else {
-        const news = await getNews(database, config.domain, sessionID, config.newsModuleIDs);
-        await queryNewsTable(database);
-        // writeJsonFile('./target/news.json', news);
+        await getNews(database, config.domain, sessionID, config.newsModuleIDs);
+        await insertRow(database, 'scrapers', 'news', true);
+        //await queryTable(database, 'news_articles');
     }
 
     // Get tickets
@@ -75,24 +74,24 @@ async function main(): Promise<void> {
     // Get applications
     if (config.disabledModules?.applications) {
         console.log('Applications module disabled, skipping application scraping.');
-    } else if (fileExists('./target/applications.json')) {
+    } else if (await isModuleScraped(database, 'applications')) {
         console.log('Applications already scraped, skipping application scraping...');
     } else {
-        const applications = await getApplications(database, config.domain, sessionID, siteID);
-        await queryApplicationsTable(database);
-        // writeJsonFile('./target/applications.json', applications);
-        deleteFiles(['./target/recovery/applications.json']);
+        await getApplications(database, config.domain, sessionID, siteID);
+        await insertRow(database, 'scrapers', 'applications', true);
+        //await queryTable(database, 'applications');
+        deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
     }
 
     // Get users
     if (config.disabledModules?.users) {
         console.log('Users module disabled, skipping user tag scraping.');
-    } else if (fileExists('./target/users.json')) {
+    } else if (await isModuleScraped(database, 'users')) {
         console.log('Users already scraped, skipping user tag scraping...');
     } else {
-        const users = await getUsers(database, config.domain, config.apiKey);
-        await queryUsersTable(database);
-        // writeJsonFile('./target/users.json', users);
+        await getUsers(database, config.domain, config.apiKey);
+        await insertRow(database, 'scrapers', 'users', true);
+        //await queryTable(database, 'users');
     }
 
     // Get user tags

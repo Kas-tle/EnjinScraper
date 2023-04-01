@@ -1,7 +1,6 @@
-const sqlite3 = require('sqlite3').verbose();
 import { Database } from 'sqlite3';
 import { News, NewsArticle } from '../interfaces/news';
-import { insertNewsTable } from '../util/database';
+import { insertRow } from '../util/database';
 import { enjinRequest } from '../util/request';
 
 interface NewsContent {
@@ -13,7 +12,7 @@ interface NewsModule {
     [key: string]: NewsArticle;
 }
 
-async function getModuleNews(domain: string, sessionID: string, newsModuleID: string): Promise<NewsContent> {
+async function getModuleNews(domain: string, sessionID: string, newsModuleID: string, database: Database) {
     let newsPosts: NewsModule = {};
     let result: News.GetNews = [];
 
@@ -36,35 +35,36 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
         result = data.result;
 
         if (result.length > 0) {
-            result.forEach((newsPost) => {
-                newsPosts[newsPost.article_id] = newsPost;
+            result.forEach(async (newsPost) => {
+                await insertRow(
+                    database,
+                    'news_articles',
+                    newsPost.article_id, 
+                    newsPost.user_id, 
+                    newsPost.num_comments, 
+                    newsPost.timestamp, 
+                    newsPost.status, 
+                    newsPost.title, 
+                    newsPost.content, 
+                    newsPost.commenting_mode, 
+                    newsPost.ordering, 
+                    newsPost.sticky, 
+                    newsPost.last_updated, 
+                    newsPost.username, 
+                    newsPost.displayname
+                )
             });
             page++;
         }
     } while (result.length > 0);
-
-    return { [newsModuleID]: newsPosts };
 }
 
-export async function getNews(database: Database, domain: string, sessionID: string, newsModuleIDs: string[]): Promise<NewsContent> {
-    let allNews: NewsContent = {};
-
+export async function getNews(database: Database, domain: string, sessionID: string, newsModuleIDs: string[]) {
+    await insertRow(database, 'scrapers', 'news', false);
     const totalNewsModules = newsModuleIDs.length;
     let currentNewsModule = 1;
     for (const newsModuleID of newsModuleIDs) {
         console.log(`Getting news posts for module ${newsModuleID}... (${currentNewsModule}/${totalNewsModules})`);
-        const moduleNews = await getModuleNews(domain, sessionID, newsModuleID);
-        allNews = { ...allNews, ...moduleNews };
+        await getModuleNews(domain, sessionID, newsModuleID, database);
     }
-
-    for (const moduleID in allNews) {
-        const newsModule = allNews[moduleID];
-        for (const articleID in newsModule) {
-            const newsArticle = newsModule[articleID];
-            insertNewsTable(database, articleID, newsArticle);
-        }
-    }
-
-      
-    return allNews;
 }

@@ -107,4 +107,4 @@ dist
 target/
 config.json
 package-lock.json
-site.sqlite
+*.sqlite

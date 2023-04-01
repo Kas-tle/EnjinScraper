@@ -1,13 +1,12 @@
-const sqlite3 = require('sqlite3').verbose();
 import { Database } from 'sqlite3';
-import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
+import { UserAdmin } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
-import { insertUsersTable } from '../util/database';
+import { insertRow } from '../util/database';
 
-export async function getUsers(database: Database, domain: string, apiKey: string): Promise<Record<string, UserAdminUser>> {
+export async function getUsers(database: Database, domain: string, apiKey: string) {
     console.log('Getting all users...');
+    await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};
-    const users: Record<string, UserAdminUser> = {};
     let page = 1;
 
     do {
@@ -29,14 +28,35 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
         result = data.result;
 
         if (Object.keys(result).length > 0) {
-            Object.keys(result).forEach((userID) => {
-                users[userID] = result[userID];
-                insertUsersTable(database, userID, users[userID]);
-            });
+            const userIDs = Object.keys(result);
+            for (let i = 0; i < userIDs.length; i++) {
+                const userID = userIDs[i];
+                const user = result[userID];
+                await insertRow(
+                    database,
+                    "users",
+                    userID,
+                    user.username,
+                    user.forum_post_count,
+                    user.forum_votes,
+                    user.lastseen,
+                    user.datejoined,
+                    user.points_total,
+                    user.points_day,
+                    user.points_week,
+                    user.points_month,
+                    user.points_forum,
+                    user.points_purchase,
+                    user.points_other,
+                    user.points_spent,
+                    user.points_decayed,
+                    null,
+                    user.points_adjusted
+                );
+            }
             page++;
         }
     } while (Object.keys(result).length > 0);
 
     console.log(`Finished getting all pages for users.`)
-    return users;
 }
