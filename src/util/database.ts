@@ -31,10 +31,10 @@ export async function initializeTables(database: Database): Promise<void> {
         `CREATE TABLE IF NOT EXISTS ${table.name} (${columns})`,
         (err: { message: any }) => {
           if (err) {
-            console.error(`Error creating table ${table.name}:`, err.message);
+            console.error(`Error creating table '${table.name}':`, err.message);
             reject(err);
           } else {
-            console.log(`Table ${table.name} created successfully.`);
+            console.log(`Table '${table.name}' created successfully.`);
             resolve();
           }
         }
@@ -51,7 +51,7 @@ export async function queryTable(database: Database, table: String): Promise<voi
   return new Promise((resolve, reject) => {
     database.all(`SELECT * FROM ${table}`, (err: Error | null, rows: any[]) => {
       if (err) {
-        console.error(`Error querying table ${table}:`, err.message);
+        console.error(`Error querying table '${table}':`, err.message);
         reject();
       } else {
         console.log(rows);
@@ -69,16 +69,16 @@ export async function insertRow(database: Database, table: string, ...params: (s
       const statement = database.prepare(`INSERT OR REPLACE INTO ${table} VALUES (${values})`);
       statement.run(...params, (err: any) => {
         if (err) {
-          console.error(`Error inserting into table ${table} with params [${params.join(', ')}]:`, err.message);
+          console.error(`Error inserting into table '${table}' with params [${params.join(', ')}]:`, err.message);
           reject(err);
         } else {
-          console.log(`Inserted ${params[0]} into table ${table} successfully.`);
+          console.log(`Inserted ${params[0]} into table '${table}' successfully.`);
           resolve();
         }
         statement.finalize(); // finalize the statement to release resources
       });
     } catch (err: any) {
-      console.error(`Error preparing statement for table ${table}:`, err.message);
+      console.error(`Error preparing statement for table '${table}':`, err.message);
       reject(err);
     }
   });

@@ -48,9 +48,7 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
         result = data.result;
 
         if (Object.keys(result).length > 0) {
-            const userIDs = Object.keys(result);
-            for (let i = 0; i < userIDs.length; i++) {
-                const userID = userIDs[i];
+            Object.keys(result).forEach((userID) => {
                 const user = result[userID];
                 userDB.push([
                     userID,
@@ -71,7 +69,7 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                     null,
                     user.points_adjusted
                 ]);
-            }
+            });
             page++;
         }
     } while (Object.keys(result).length > 0);

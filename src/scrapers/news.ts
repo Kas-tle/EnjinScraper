@@ -13,7 +13,6 @@ interface NewsModule {
 }
 
 async function getModuleNews(domain: string, sessionID: string, newsModuleID: string, database: Database) {
-    let newsPosts: NewsModule = {};
     let result: News.GetNews = [];
 
     let page = 1;
