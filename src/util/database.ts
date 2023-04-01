@@ -63,10 +63,6 @@ export async function queryTable(database: Database, table: String): Promise<voi
 
 
 export async function insertRow(database: Database, table: string, ...params: (string | number | boolean | null)[]): Promise<void> {
-  // We can remove this in production, but it's useful for debugging
-  if (params.length !== tableSchemas.find((t) => t.name === table)?.schema.length) {
-    throw new Error(`Incorrect number of parameters for table ${table}.`);
-  }
   return new Promise((resolve, reject) => {
     const values = new Array(params.length).fill('?').join(', ');
     try {
@@ -85,6 +81,34 @@ export async function insertRow(database: Database, table: string, ...params: (s
       console.error(`Error preparing statement for table ${table}:`, err.message);
       reject(err);
     }
+  });
+}
+
+export async function insertRows(database: Database, tableName: string, rows: (string | number | boolean | null)[][]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const values = new Array(rows[0].length).fill('?').join(', ');
+    const sql = `INSERT INTO ${tableName} VALUES (${values})`;
+
+    database.serialize(() => {
+      database.run("BEGIN TRANSACTION");
+      for (const row of rows) {
+        database.run(sql, row, (err) => {
+          if (err) {
+            console.error(`Error inserting row into table '${tableName}':`, err.message);
+            reject(err);
+          }
+        });
+      }
+      database.run("COMMIT", (err) => {
+        if (err) {
+          console.error(`Error committing transaction on table '${tableName}':`, err.message);
+          reject(err);
+        } else {
+          console.log(`Rows inserted successfully into table '${tableName}'.`);
+          resolve();
+        }
+      });
+    });
   });
 }
 

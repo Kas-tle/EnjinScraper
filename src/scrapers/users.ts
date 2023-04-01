@@ -1,12 +1,32 @@
 import { Database } from 'sqlite3';
-import { UserAdmin } from '../interfaces/useradmin';
+import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
-import { insertRow } from '../util/database';
+import { insertRow, insertRows } from '../util/database';
 
 export async function getUsers(database: Database, domain: string, apiKey: string) {
     console.log('Getting all users...');
     await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};
+    const userDB: [
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string | null, 
+        string
+    ][] = [];
+
     let page = 1;
 
     do {
@@ -32,9 +52,7 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
             for (let i = 0; i < userIDs.length; i++) {
                 const userID = userIDs[i];
                 const user = result[userID];
-                await insertRow(
-                    database,
-                    "users",
+                userDB.push([
                     userID,
                     user.username,
                     user.forum_post_count,
@@ -52,11 +70,13 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                     user.points_decayed,
                     null,
                     user.points_adjusted
-                );
+                ]);
             }
             page++;
         }
     } while (Object.keys(result).length > 0);
+
+    await insertRows(database, 'users', userDB);
 
     console.log(`Finished getting all pages for users.`)
 }

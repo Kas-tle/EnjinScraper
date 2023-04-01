@@ -104,7 +104,7 @@ export async function getAllTickets(domain: string, apiKey: string, sessionID: s
     console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
     let allTickets: Record<string, Ticket[]> = {};
 
-    if(!fileExists('./target/recovery/tickets.json')) {
+    if (!fileExists('./target/recovery/tickets.json')) {
         allTickets = await getTicketsByModule(domain, sessionID, modules);
     }
 
@@ -129,11 +129,12 @@ export async function getAllTickets(domain: string, apiKey: string, sessionID: s
 
         const replies = await getTicketReplies(domain, sessionID, ticketCodes[i][0]);
 
-        ticketsWithReplies[ticketCodes[i][1]] = { 
-            ...ticketsWithReplies[ticketCodes[i][1]], 
-            ...{ [ticketCodes[i][0]]: 
-                { ticket: allTickets[ticketCodes[i][1]][ticketCodes[i][2]], replies } 
-            } 
+        ticketsWithReplies[ticketCodes[i][1]] = {
+            ...ticketsWithReplies[ticketCodes[i][1]],
+            ...{
+                [ticketCodes[i][0]]:
+                { ticket: allTickets[ticketCodes[i][1]][ticketCodes[i][2]], replies }
+            }
         };
 
         console.log(`Found all replies for ticket ${ticketCodes[i][0]} (${++ticketCodesCount[0]}/${totalTicketCodes})...`);
