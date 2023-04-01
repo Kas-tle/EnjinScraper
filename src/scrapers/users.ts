@@ -1,7 +1,10 @@
+const sqlite3 = require('sqlite3').verbose();
+import { Database } from 'sqlite3';
 import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
+import { insertUsersTable } from '../util/database';
 
-export async function getUsers(domain: string, apiKey: string): Promise<Record<string, UserAdminUser>> {
+export async function getUsers(database: Database, domain: string, apiKey: string): Promise<Record<string, UserAdminUser>> {
     console.log('Getting all users...');
     let result: UserAdmin.Get = {};
     const users: Record<string, UserAdminUser> = {};
@@ -28,6 +31,7 @@ export async function getUsers(domain: string, apiKey: string): Promise<Record<s
         if (Object.keys(result).length > 0) {
             Object.keys(result).forEach((userID) => {
                 users[userID] = result[userID];
+                insertUsersTable(database, userID, users[userID]);
             });
             page++;
         }

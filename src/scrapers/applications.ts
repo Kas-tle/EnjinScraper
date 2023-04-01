@@ -1,8 +1,11 @@
+const sqlite3 = require('sqlite3').verbose();
 import { Applications } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { enjinRequest } from '../util/request';
 import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
+import { Database } from 'sqlite3';
+import { insertApplicationsTable } from '../util/database';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
     const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
@@ -55,7 +58,7 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
     return applicationIDs;
 }
 
-export async function getApplications(domain: string, sessionID: string, siteID: string): Promise<Applications.GetApplication[]> {
+export async function getApplications(database: Database, domain: string, sessionID: string, siteID: string): Promise<Applications.GetApplication[]> {
     console.log('Getting applications...');
     const applications: Applications.GetApplication[] = [];
 
@@ -109,5 +112,8 @@ export async function getApplications(domain: string, sessionID: string, siteID:
     }
 
     removeExitListeners();
+    for (const app of applications) {
+        insertApplicationsTable(database, app);
+    }
     return applications;
 }

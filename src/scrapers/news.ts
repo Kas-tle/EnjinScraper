@@ -1,4 +1,7 @@
+const sqlite3 = require('sqlite3').verbose();
+import { Database } from 'sqlite3';
 import { News, NewsArticle } from '../interfaces/news';
+import { insertNewsTable } from '../util/database';
 import { enjinRequest } from '../util/request';
 
 interface NewsContent {
@@ -43,7 +46,7 @@ async function getModuleNews(domain: string, sessionID: string, newsModuleID: st
     return { [newsModuleID]: newsPosts };
 }
 
-export async function getNews(domain: string, sessionID: string, newsModuleIDs: string[]): Promise<NewsContent> {
+export async function getNews(database: Database, domain: string, sessionID: string, newsModuleIDs: string[]): Promise<NewsContent> {
     let allNews: NewsContent = {};
 
     const totalNewsModules = newsModuleIDs.length;
@@ -54,5 +57,14 @@ export async function getNews(domain: string, sessionID: string, newsModuleIDs: 
         allNews = { ...allNews, ...moduleNews };
     }
 
+    for (const moduleID in allNews) {
+        const newsModule = allNews[moduleID];
+        for (const articleID in newsModule) {
+            const newsArticle = newsModule[articleID];
+            insertNewsTable(database, articleID, newsArticle);
+        }
+    }
+
+      
     return allNews;
 }
