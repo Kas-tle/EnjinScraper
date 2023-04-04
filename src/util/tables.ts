@@ -203,13 +203,15 @@ export const tableSchemas: TableSchema[] = [
             'assigneeHTML TEXT',
             'priority_name TEXT',
             'replies_count INTEGER',
-            'private_reply_count INTEGER'
+            'private_reply_count INTEGER',
+            'has_uploads BOOLEAN'
         ],
     },
     {
         name: 'ticket_replies',
         schema: [
-            'id INTEGER PRIMARY KEY',
+            'id TEXT PRIMARY KEY',
+            'ticket_id TEXT',
             'preset_id TEXT',
             'sent TEXT',
             'text TEXT',
