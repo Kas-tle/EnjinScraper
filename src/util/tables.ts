@@ -204,24 +204,8 @@ export const tableSchemas: TableSchema[] = [
             'priority_name TEXT',
             'replies_count INTEGER',
             'private_reply_count INTEGER',
+            'replies JSON',
             'has_uploads BOOLEAN'
-        ],
-    },
-    {
-        name: 'ticket_replies',
-        schema: [
-            'id TEXT PRIMARY KEY',
-            'ticket_id TEXT',
-            'preset_id TEXT',
-            'sent TEXT',
-            'text TEXT',
-            'user_id TEXT',
-            'mode TEXT',
-            'origin TEXT',
-            'agent TEXT',
-            'userHTML TEXT',
-            'createdHTML TEXT',
-            'username TEXT'
         ],
     },
 

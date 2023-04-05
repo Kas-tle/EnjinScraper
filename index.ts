@@ -66,8 +66,9 @@ async function main(): Promise<void> {
     } else if (fileExists('./target/tickets.json')) {
         console.log('Tickets already scraped, skipping ticket scraping...');
     } else {
-        const tickets = await getAllTickets(config.domain, config.apiKey, sessionID);
-        writeJsonFile('./target/tickets.json', tickets);
+        await getAllTickets(database, config.domain, config.apiKey, sessionID);
+        // await queryTable(database, 'tickets');
+        // writeJsonFile('./target/tickets.json', tickets);
         deleteFiles(['./target/recovery/module_tickets.json', './target/recovery/tickets.json']);
     }
 
