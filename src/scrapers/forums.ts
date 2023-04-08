@@ -368,14 +368,10 @@ export async function getForums(database: Database, domain: string, sessionID: s
     const totalForums = forumIDs.length;
 
     for (let i = forumCount[0]; i < totalForums; i++) {
-        try {
-            const moduleThreadIDs = await getForumThreadIDs(database, domain, sessionID, forumIDs[i]);
-            threadIDs.push(...moduleThreadIDs);
-    
-            console.log(`Found ${moduleThreadIDs.length} threads in forum ${forumIDs[i][1]}... (${++forumCount[0]}/${totalForums})`)
-        } catch (error) {
-            console.log(error)
-        }
+        const moduleThreadIDs = await getForumThreadIDs(database, domain, sessionID, forumIDs[i]);
+        threadIDs.push(...moduleThreadIDs);
+
+        console.log(`Found ${moduleThreadIDs.length} threads in forum ${forumIDs[i][1]}... (${++forumCount[0]}/${totalForums})`)
     }
 
     const totalThreads = threadIDs.length;
