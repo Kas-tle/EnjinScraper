@@ -84,27 +84,81 @@ export async function insertRow(database: Database, table: string, ...params: (s
   });
 }
 
-export async function insertRows(database: Database, tableName: string, rows: (string | number | boolean | null)[][]): Promise<void> {
+export async function updateRow(database: Database, table: string, whereKey: string, whereValue: string, updateKeys: string[], updateValues: (string | number | boolean | null)[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const setClause = updateKeys.map((key, _index) => `${key} = ?`).join(', ');
+      const statement = database.prepare(`UPDATE ${table} SET ${setClause} WHERE ${whereKey} = ?`);
+
+      const allParams = [...updateValues, whereValue];
+      
+      statement.run(allParams, (err: any) => {
+        if (err) {
+          console.error(`Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValue}':`, err.message);
+          reject(err);
+        } else {
+          console.log(`Updated row with '${whereKey}' = '${whereValue}' in table '${table}' successfully.`);
+          resolve();
+        }
+        statement.finalize(); // finalize the statement to release resources
+      });
+    } catch (err: any) {
+      console.error(`Error preparing statement for table '${table}':`, err.message);
+      reject(err);
+    }
+  });
+}
+
+export async function insertRows(database: Database, table: string, rows: (string | number | boolean | null)[][]): Promise<void> {
   return new Promise((resolve, reject) => {
     const values = new Array(rows[0].length).fill('?').join(', ');
-    const sql = `INSERT INTO ${tableName} VALUES (${values})`;
+    const sql = `INSERT OR REPLACE INTO ${table} VALUES (${values})`;
 
     database.serialize(() => {
       database.run("BEGIN TRANSACTION");
       for (const row of rows) {
         database.run(sql, row, (err) => {
           if (err) {
-            console.error(`Error inserting row into table '${tableName}':`, err.message);
+            console.error(`Error inserting row into table '${table}':`, err.message);
             reject(err);
           }
         });
       }
       database.run("COMMIT", (err) => {
         if (err) {
-          console.error(`Error committing transaction on table '${tableName}':`, err.message);
+          console.error(`Error committing transaction on table '${table}':`, err.message);
           reject(err);
         } else {
-          console.log(`Rows inserted successfully into table '${tableName}'.`);
+          console.log(`Rows inserted successfully into table '${table}'.`);
+          resolve();
+        }
+      });
+    });
+  });
+}
+
+export async function updateRows(database: Database, table: string, whereKey: string, whereValues: (string | number | boolean | null)[], updateKeys: string[], updateValues: (string | number | boolean | null)[][]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const setClause = updateKeys.map((key) => `${key} = ?`).join(', ');
+    const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereKey} = ?`;
+
+    database.serialize(() => {
+      database.run("BEGIN TRANSACTION");
+      for (let i = 0; i < whereValues.length; i++) {
+        const allParams = [...updateValues[i], whereValues[i]];
+        database.run(sql, allParams, (err) => {
+          if (err) {
+            console.error(`Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValues[i]}':`, err.message);
+            reject(err);
+          }
+        });
+      }
+      database.run("COMMIT", (err) => {
+        if (err) {
+          console.error(`Error committing transaction on table '${table}':`, err.message);
+          reject(err);
+        } else {
+          console.log(`Rows updated successfully in table '${table}'.`);
           resolve();
         }
       });

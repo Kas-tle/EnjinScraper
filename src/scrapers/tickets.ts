@@ -30,7 +30,10 @@ async function getTicketModules(database: Database, domain: string, apiKey: stri
             ]);
         });
     }
-    await insertRows(database, 'ticket_modules', userDB);
+
+    if (userDB && userDB.length > 0) {
+        await insertRow(database, 'scrapers', 'ticket_modules', false);
+    }
 
     return Object.keys(data.result);
 }

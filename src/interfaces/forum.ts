@@ -20,8 +20,8 @@ export namespace Forum {
     }
     export interface GetForum {
         forum: Forum;
-        announcement_global: [];
-        announcement_local: [];
+        announcement_global: ThreadStats[];
+        announcement_local: ThreadStats[];
         sticky: ThreadStats[];
         threads: ThreadStats[];
         subforums: Forum[]
@@ -31,7 +31,7 @@ export namespace Forum {
         post_access: boolean;
         new_thread_access: boolean;
         minimum_posts_limitation: boolean;
-        notices: [];
+        notices: ThreadStats[];
     }
     export interface GetThread {
         thread: Thread;
@@ -271,3 +271,30 @@ export interface Post {
     user_posts: string;
     url: string;
 }
+type ForumTuple = [
+    string, string, string, string, string, string, string, string, string, string,
+    string, string|null, string, string|null, string, string|null, string, string, string, string,
+    string, string, string, string, string, string, string, string, string, string,
+    string, string, string, string, string, string, string, string, string, string,
+    string, string, string, string, string, string, string, string, string, string,
+    string, string, string, string, string|null, string|null, string|null, boolean, boolean, string|null,
+    string|null, string|null, boolean|null, string|null, number|null, string|null, string|null, string|null, string|null
+]
+
+export interface ForumsDB extends Array<ForumTuple[number]> {}
+
+type ThreadTuple = [
+    string, string, string, string, string, string, string, string, string|null, string|null,
+    string|null, string|null, string|null, string, string, string|null, string|null, string|null, string|null, string,
+    string, string, boolean, boolean, boolean, string, string, string, string|null, string|null,
+    string|null, string|null, string|null
+]
+
+export interface ThreadsDB extends Array<ThreadTuple[number]> {}
+
+type PostTuple = [
+    string, string, string, string, string, string, string, string, string, string,
+    string, string, string, string, string, string, boolean, string, string, string
+]
+
+export interface PostsDB extends Array<PostTuple[number]> {}

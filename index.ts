@@ -36,12 +36,11 @@ async function main(): Promise<void> {
         console.log('No forum module IDs provided, skipping forum scraping...');
     } else if (config.disabledModules?.forums) {
         console.log('Forums module disabled, skipping forum scraping...');
-    } else if (fileExists('./target/forums.json')) {
+    } else if (await isModuleScraped(database, 'forums')) {
         console.log('Forums already scraped, skipping forum scraping...');
     } else {
-        const forums = await getForums(config.domain, sessionID, config.forumModuleIDs);
-        writeJsonFile('./target/forums.json', forums);
-        deleteFiles(['./target/recovery/forums.json', './target/recovery/forum_progress.json']);
+        await getForums(database, config.domain, sessionID, config.forumModuleIDs);
+        deleteFiles(['./target/recovery/forum_progress.json']);
     }
 
     // Get news

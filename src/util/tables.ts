@@ -12,13 +12,25 @@ export const tableSchemas: TableSchema[] = [
 
     // Forums
     {
+        name: 'forum_modules',
+        schema: [
+            'preset_id TEXT PRIMARY KEY',
+            'title_welcome TEXT',
+            'subforums JSON',
+            'total_threads INTEGER',
+            'total_posts INTEGER',
+            'category_names JSON',
+            'notice JSON'
+        ]
+    },
+    {
         name: 'forums',
         schema: [
-            'forum_id TEXT PRIMARY KEY',
             'title_welcome TEXT',
             'show_forum_viewers TEXT',
-            'preset_id TEXT',
+            'preset_id TEXT REFERENCES forum_modules(preset_id)',
             'category_id TEXT',
+            'forum_id TEXT PRIMARY KEY',
             'category_name TEXT',
             'category_order TEXT',
             'collapsed TEXT',
@@ -71,21 +83,25 @@ export const tableSchemas: TableSchema[] = [
             'subscription TEXT',
             'read_time TEXT',
             'category_collapsed_state TEXT',
-            'unread INTEGER',
-            'is_collapsed INTEGER',
+            'unread BOOLEAN',
+            'is_collapsed BOOLEAN',
             'parent_forum_name TEXT',
             'parent_forum_name_2 TEXT',
             'parent_forum_id_2 TEXT',
             'require_game_character BOOLEAN',
             'logo_url TEXT',
-            'unread_threads INTEGER'
+            'unread_threads INTEGER',
+            'announcement_global JSON',
+            'announcement_local JSON',
+            'sticky JSON',
+            'notices JSON',
         ],
     },
     {
         name: 'threads',
         schema: [
-            'preset_id TEXT',
-            'forum_id TEXT',
+            'forum_id TEXT REFERENCES forums(forum_id)',
+            'preset_id TEXT REFERENCES forum_modules(preset_id)',
             'thread_id TEXT PRIMARY KEY',
             'thread_subject TEXT',
             'thread_replies TEXT',
@@ -117,15 +133,12 @@ export const tableSchemas: TableSchema[] = [
             'disable_voting TEXT',
             'show_signature TEXT',
             'url_cms TEXT',
-            'FOREIGN KEY (forum_id) REFERENCES forums(forum_id)'
         ],
     },
     {
         name: 'posts',
         schema: [
             'post_id TEXT PRIMARY KEY',
-            'forum_id TEXT',
-            'thread_id TEXT',
             'post_time TEXT',
             'post_content TEXT',
             'post_content_html TEXT',
@@ -145,8 +158,6 @@ export const tableSchemas: TableSchema[] = [
             'user_votes TEXT',
             'user_posts TEXT',
             'url TEXT',
-            'FOREIGN KEY (forum_id) REFERENCES forums(forum_id)',
-            'FOREIGN KEY (thread_id) REFERENCES threads(thread_id)'
         ],
     },
 
