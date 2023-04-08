@@ -8,6 +8,25 @@ export interface EnjinResponse<T> {
     }
 }
 
+export interface Params {
+    email? : string;
+    password? : string;
+    preset_id? : string;
+    session_id? : string;
+    forum_id? : string;
+    page? : string;
+    thread_id? : string;
+    api_key? : string;
+    ticket_code? : string;
+    status? : string;
+    application_id? : string;
+    type? : string;
+    site_id? : string;
+    characters? : string;
+    mcplayers? : string;
+    user_id? : string;
+}
+
 export interface Pagination {
     page: string;
     nr_pages: number;

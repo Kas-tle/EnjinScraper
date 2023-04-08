@@ -32,7 +32,7 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
                     session_id: sessionID,
                     type,
                     site_id: siteID,
-                    page,
+                    page: page.toString(),
                 }
 
                 const data = await enjinRequest<Applications.GetList>(params, 'Applications.getList', domain);

@@ -45,7 +45,7 @@ async function getTicketReplies(domain: string, sessionID: string, ticketCode: s
         const params = {
             session_id: sessionID,
             ticket_code: ticketCode,
-            page: page[0],
+            page: page[0].toString(),
         }
 
         const data = await enjinRequest<Tickets.GetReplies>(params, 'Tickets.getReplies', domain);
@@ -91,7 +91,7 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                 session_id: sessionID,
                 preset_id: modules[i],
                 status: 'all',
-                page: page[0],
+                page: page[0].toString(),
             }
             const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
 

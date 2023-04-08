@@ -8,7 +8,6 @@ import { getAllTickets } from './src/scrapers/tickets';
 import { getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
 import { getAllUserTags } from './src/scrapers/usertags';
-import { queryTable } from './src/util/database';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -31,8 +30,6 @@ async function main(): Promise<void> {
     // Initialize database tables
     const database = await databaseConnection();
     await initializeTables(database);
-
-    //process.kill(process.pid, 'SIGINT');
 
     // Get forums
     if (!config.forumModuleIDs || config.forumModuleIDs.length === 0) {
@@ -57,7 +54,6 @@ async function main(): Promise<void> {
     } else {
         await getNews(database, config.domain, sessionID, config.newsModuleIDs);
         await insertRow(database, 'scrapers', 'news', true);
-        //await queryTable(database, 'news_articles');
     }
 
     // Get tickets
@@ -68,8 +64,6 @@ async function main(): Promise<void> {
     } else {
         await getAllTickets(database, config.domain, config.apiKey, sessionID);
         await insertRow(database, 'scrapers', 'tickets', true);
-        // await queryTable(database, 'tickets');
-        // writeJsonFile('./target/tickets.json', tickets);
         deleteFiles(['./target/recovery/module_tickets.json']);
     }
 
@@ -81,7 +75,6 @@ async function main(): Promise<void> {
     } else {
         await getApplications(database, config.domain, sessionID, siteID);
         await insertRow(database, 'scrapers', 'applications', true);
-        //await queryTable(database, 'applications');
         deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
     }
 
@@ -93,7 +86,6 @@ async function main(): Promise<void> {
     } else {
         await getUsers(database, config.domain, config.apiKey);
         await insertRow(database, 'scrapers', 'users', true);
-        //await queryTable(database, 'users');
     }
 
     // Get user tags
