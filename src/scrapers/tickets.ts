@@ -35,7 +35,7 @@ async function getTicketModules(database: Database, domain: string, apiKey: stri
     return Object.keys(data.result);
 }
 
-async function getTicketReplies(database: Database, domain: string, sessionID: string, ticketCode: string, ticketId: string): Promise<[TicketReply[], boolean]> {
+async function getTicketReplies(domain: string, sessionID: string, ticketCode: string): Promise<[TicketReply[], boolean]> {
     let page = [1];
     let lastPage = [1];
     let replies: TicketReply[] = [];
@@ -67,23 +67,23 @@ async function getTicketReplies(database: Database, domain: string, sessionID: s
 
 async function getTicketsByModule(database: Database, domain: string, sessionID: string, modules: string[]) {
     const moduleCount = [0];
+    const ticketCount = [0];
     let totalModules = modules.length;
     let tickets = 0;
     let page = [1];
     let lastPage = [1];
-    let allTickets: Record<string, Ticket[]>[] = [];
 
     if (fileExists('./target/recovery/module_tickets.json')) {
-        const progress = parseJsonFile('../../target/recovery/module_tickets.json') as [Record<string, Ticket[]>[], Ticket[], string[], number[], number[], number[]];
-        allTickets = progress[0];
-        modules = progress[2];
+        const progress = parseJsonFile('./target/recovery/module_tickets.json') as [string[], number[], number[], number[], number[]];
+        modules = progress[0];
         totalModules = modules.length;
-        moduleCount[0] = progress[3][0];
-        page[0] = progress[4][0];
-        lastPage[0] = progress[5][0];
+        moduleCount[0] = progress[1][0];
+        ticketCount[0] = progress[2][0];
+        page[0] = progress[3][0];
+        lastPage[0] = progress[4][0];
     }
 
-    addExitListeners(['./target/recovery/module_tickets.json'], [[allTickets, modules, moduleCount, page, lastPage]]);
+    addExitListeners(['./target/recovery/module_tickets.json'], [[modules, moduleCount, ticketCount, page, lastPage]]);
 
     for (let i = moduleCount[0]; i < totalModules; i++) {
         while (page[0] <= lastPage[0]) {
@@ -100,13 +100,13 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                 break;
             }
 
-            lastPage[0] = data.result.pagination.last_page;
-            allTickets[0] = { ...allTickets[0], ...{ [modules[i]]: data.result.results } };
+            lastPage[0] = data.result.pagination.nr_pages;
             tickets += data.result.results.length;
-            console.log(`Found tickets for module ${modules[i]} page (${page[0]++}/${lastPage})...`);
+            console.log(`Scraping tickets for module ${modules[i]} page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
 
-            for (const ticket of data.result.results) {
-                const [replies, has_uploads] = await getTicketReplies(database, domain, sessionID, ticket.code, ticket.id);
+            for (let j = ticketCount[0]; j < data.result.results.length; j++) {
+                const ticket = data.result.results[j];
+                const [replies, has_uploads] = await getTicketReplies(domain, sessionID, ticket.code);
                 const values = [
                     ticket.id,
                     ticket.code,
@@ -135,12 +135,13 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                     has_uploads
                 ];
                 await insertRow(database, 'tickets', ...values);
-
+                console.log(`Scraping ticket ${ticket.id} (${++ticketCount[0]}/${data.result.results.length}) page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
             }
-
+            ticketCount[0] = 0;
+            page[0]++;
         }
         page[0] = 1;
-        console.log(`Found ${tickets} tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules}))`);
+        console.log(`Scraped all tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules})`);
         tickets = 0;
     }
     removeExitListeners();
@@ -148,7 +149,12 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
 
 export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string) {
     console.log('Getting all tickets...');
-    const modules = await getTicketModules(database, domain, apiKey);
+    let modules: string[];
+    if (fileExists('./target/recovery/module_tickets.json')) {
+        modules = [];
+    } else {
+        modules = await getTicketModules(database, domain, apiKey);
+    }
     console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
     await getTicketsByModule(database, domain, sessionID, modules);
 }

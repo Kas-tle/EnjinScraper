@@ -63,13 +63,14 @@ async function main(): Promise<void> {
     // Get tickets
     if (config.disabledModules?.tickets) {
         console.log('Tickets module disabled, skipping ticket scraping.');
-    } else if (fileExists('./target/tickets.json')) {
+    } else if (await isModuleScraped(database, 'tickets')) {
         console.log('Tickets already scraped, skipping ticket scraping...');
     } else {
         await getAllTickets(database, config.domain, config.apiKey, sessionID);
+        await insertRow(database, 'scrapers', 'tickets', true);
         // await queryTable(database, 'tickets');
         // writeJsonFile('./target/tickets.json', tickets);
-        deleteFiles(['./target/recovery/module_tickets.json', './target/recovery/tickets.json']);
+        deleteFiles(['./target/recovery/module_tickets.json']);
     }
 
     // Get applications
