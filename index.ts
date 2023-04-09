@@ -7,7 +7,6 @@ import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
 import { getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
-import { getAllUserTags } from './src/scrapers/usertags';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -83,19 +82,8 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'users')) {
         console.log('Users already scraped, skipping user tag scraping...');
     } else {
-        await getUsers(database, config.domain, config.apiKey);
+        await getUsers(database, config.domain, config.apiKey, config.disabledModules?.usertags);
         await insertRow(database, 'scrapers', 'users', true);
-    }
-
-    // Get user tags
-    if (config.disabledModules?.usertags) {
-        console.log('User tags module disabled, skipping user scraping.');
-    } else if (fileExists('./target/userstags.json')) {
-        console.log('User tags already scraped, skipping user scraping...');
-    } else {
-        const userTags = await getAllUserTags(config.domain, config.apiKey);
-        writeJsonFile('./target/usertags.json', userTags);
-        deleteFiles(['./target/recovery/usertags.json']);
     }
 
     process.kill(process.pid, 'SIGINT');
