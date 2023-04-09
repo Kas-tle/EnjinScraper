@@ -4,8 +4,8 @@ import { enjinRequest } from '../util/request';
 import { insertRow, insertRows } from '../util/database';
 import { getAllUserTags } from './usertags';
 
-export async function getUsers(database: Database, domain: string, apiKey: string) {
-    const allUserTags = await getAllUserTags(domain, apiKey);
+export async function getUsers(database: Database, domain: string, apiKey: string, disableUserTags = false) {
+    const allUserTags = disableUserTags ? {} : await getAllUserTags(domain, apiKey);
     console.log('Getting all users...');
     await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};

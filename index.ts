@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'users')) {
         console.log('Users already scraped, skipping user tag scraping...');
     } else {
-        await getUsers(database, config.domain, config.apiKey);
+        await getUsers(database, config.domain, config.apiKey, config.disabledModules?.usertags);
         await insertRow(database, 'scrapers', 'users', true);
     }
 
