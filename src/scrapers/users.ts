@@ -1,10 +1,34 @@
+import { Database } from 'sqlite3';
 import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
+import { insertRow, insertRows } from '../util/database';
+import { getAllUserTags } from './usertags';
 
-export async function getUsers(domain: string, apiKey: string): Promise<Record<string, UserAdminUser>> {
+export async function getUsers(database: Database, domain: string, apiKey: string, disableUserTags = false) {
+    const allUserTags = disableUserTags ? {} : await getAllUserTags(domain, apiKey);
     console.log('Getting all users...');
+    await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};
-    const users: Record<string, UserAdminUser> = {};
+    const userDB: [
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string, 
+        string | null, 
+        string
+    ][] = [];
+
     let page = 1;
 
     do {
@@ -27,12 +51,32 @@ export async function getUsers(domain: string, apiKey: string): Promise<Record<s
 
         if (Object.keys(result).length > 0) {
             Object.keys(result).forEach((userID) => {
-                users[userID] = result[userID];
+                const user = result[userID];
+                userDB.push([
+                    userID,
+                    user.username,
+                    user.forum_post_count,
+                    user.forum_votes,
+                    user.lastseen,
+                    user.datejoined,
+                    user.points_total,
+                    user.points_day,
+                    user.points_week,
+                    user.points_month,
+                    user.points_forum,
+                    user.points_purchase,
+                    user.points_other,
+                    user.points_spent,
+                    user.points_decayed,
+                    userID in allUserTags ? JSON.stringify(allUserTags[userID]) : null,
+                    user.points_adjusted
+                ]);
             });
             page++;
         }
     } while (Object.keys(result).length > 0);
 
+    await insertRows(database, 'users', userDB);
+
     console.log(`Finished getting all pages for users.`)
-    return users;
 }

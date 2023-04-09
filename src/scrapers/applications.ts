@@ -3,6 +3,8 @@ import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { enjinRequest } from '../util/request';
 import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
+import { Database } from 'sqlite3';
+import { insertRow } from '../util/database';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
     const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
@@ -30,7 +32,7 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
                     session_id: sessionID,
                     type,
                     site_id: siteID,
-                    page,
+                    page: page.toString(),
                 }
 
                 const data = await enjinRequest<Applications.GetList>(params, 'Applications.getList', domain);
@@ -55,20 +57,20 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
     return applicationIDs;
 }
 
-export async function getApplications(domain: string, sessionID: string, siteID: string): Promise<Applications.GetApplication[]> {
+export async function getApplications(database: Database, domain: string, sessionID: string, siteID: string) {
     console.log('Getting applications...');
-    const applications: Applications.GetApplication[] = [];
+    await insertRow(database, 'scrapers', 'applications', false);
 
     const applicationTypes = await getApplicationTypes(domain);
     console.log(`Application types: ${applicationTypes.join(', ')}`);
 
     let applicationIDs: string[] = [];
-    if (fileExists('./target/recovery/application_progress.json')) {
+    if (fileExists('./target/recovery/application_ids.json')) {
         console.log('Found recovery file, skipping application ID retrieval.');
-        applicationIDs = parseJsonFile('./target/recovery/application_progress.json') as string[];
+        applicationIDs = parseJsonFile('./target/recovery/application_ids.json') as string[];
     } else {
         applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
-        writeJsonFile('./target/recovery/application_progress.json', applicationIDs);
+        writeJsonFile('./target/recovery/application_ids.json', applicationIDs);
     }
 
     const totalApplications = applicationIDs.length;
@@ -76,14 +78,14 @@ export async function getApplications(domain: string, sessionID: string, siteID:
 
     let currentApplication = 1;
 
-    if (fileExists('./target/recovery/applications.json')) {
+    if (fileExists('./target/recovery/remaining_applications.json')) {
         console.log('Found recovery applications file, starting where we left off.');
-        applications.push(...parseJsonFile('./target/recovery/applications.json') as Applications.GetApplication[]);
-        applicationIDs = applicationIDs.filter((id) => !applications.some((application) => application.application_id === id));
-        currentApplication = applications.length + 1;
+        applicationIDs = parseJsonFile('./target/recovery/remaining_applications.json') as string[];
+        currentApplication = totalApplications - applicationIDs.length + 1;
     }
 
-    addExitListeners(['./target/recovery/applications.json'], [applications]);
+    let remainingApplicationIDs: string[] = [...applicationIDs];
+    addExitListeners(['./target/recovery/remaining_applications.json'], [remainingApplicationIDs]);
 
     try {
         for (const id of applicationIDs) {
@@ -102,12 +104,49 @@ export async function getApplications(domain: string, sessionID: string, siteID:
             }
 
             const { result } = data;
-            applications.push(result);
+            await insertRow(
+                database,
+                'applications', 
+                result.application_id, 
+                result.site_id, 
+                result.preset_id, 
+                result.title, 
+                result.user_ip, 
+                result.is_mine, 
+                result.can_manage, 
+                result.created, 
+                result.updated, 
+                result.read, 
+                result.comments, 
+                result.read_comments, 
+                result.app_comments, 
+                result.admin_comments, 
+                result.site_name, 
+                result.user_id, 
+                result.is_online, 
+                result.admin_online, 
+                result.username, 
+                result.avatar, 
+                result.admin_user_id, 
+                result.admin_username, 
+                result.admin_avatar,
+                result.site_logo,
+                JSON.stringify(result.user_data),
+                result.is_archived,
+                result.is_trashed,
+                result.allow_app_comments,
+                result.post_app_comments,
+                result.allow_admin_comments
+            ).then(() => {
+                const index = remainingApplicationIDs.indexOf(id);
+                if (index !== -1) {
+                    remainingApplicationIDs.splice(index, 1);
+                }
+            })
         }
     } catch (error) {
         console.log(`Error getting applications: ${getErrorMessage(error)}`);
     }
 
     removeExitListeners();
-    return applications;
 }

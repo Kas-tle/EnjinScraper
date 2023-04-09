@@ -1,12 +1,12 @@
 import axios from "axios";
 import { getConfig } from './config';
 import { getErrorMessage } from "./error";
-import { EnjinResponse } from "../interfaces/generic";
+import { EnjinResponse, Params } from "../interfaces/generic";
 import { writeJsonFile } from "./files";
 
 let id = 0;
 
-export async function enjinRequest<T>(params: object, method: string, domain: string): Promise<EnjinResponse<T>> {
+export async function enjinRequest<T>(params: Params, method: string, domain: string): Promise<EnjinResponse<T>> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
@@ -23,7 +23,13 @@ export async function enjinRequest<T>(params: object, method: string, domain: st
                 { headers: { 'Content-Type': 'application/json' } }
             );
 
-            config.debug ? writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, {request: params, data: data}) : {};
+            if (config.debug) {
+                params.hasOwnProperty('session_id') && (params.session_id = '***');
+                params.hasOwnProperty('password') && (params.password = '***');
+                params.hasOwnProperty('email') && (params.email = '***');
+                params.hasOwnProperty('api_key') && (params.api_key = '***');
+                writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, {request: (params), data: data})
+            }
 
             return data;
         } catch (error: any) {

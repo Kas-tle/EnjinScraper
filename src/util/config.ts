@@ -38,8 +38,7 @@ const defaultConfig: Config = {
         news: false,
         tickets: false,
         applications: false,
-        users: false,
-        usertags: true
+        users: false
     },
     debug: false
 };
@@ -51,8 +50,9 @@ export async function getConfig(): Promise<Config> {
         return cachedConfig;
     }
     try {
+        const credentialsData = await fs.promises.readFile("credentials.json", "utf-8");
         const configData = await fs.promises.readFile("config.json", "utf-8");
-        const config = JSON.parse(configData);
+        const config = {...JSON.parse(configData), ...JSON.parse(credentialsData)};
         cachedConfig = config;
         return config;
     } catch (err) {

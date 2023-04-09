@@ -1,83 +1,54 @@
+import { Database } from 'sqlite3';
 import { Ticket, TicketReply, Tickets } from '../interfaces/tickets';
+import { insertRow, insertRows } from '../util/database';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
 
-async function getTicketModules(domain: string, apiKey: string): Promise<string[]> {
+async function getTicketModules(database: Database, domain: string, apiKey: string): Promise<string[]> {
 
     const params = {
         api_key: apiKey,
     }
     const data = await enjinRequest<Tickets.GetModules>(params, 'Tickets.getModules', domain);
+    const userDB: [
+        string, 
+        string | null
+    ][] = [];
 
     if (data.error) {
         console.log(`Error getting ticket modules: ${data.error.code} ${data.error.message}`)
         return [];
     }
+
+    if (Object.keys(data.result).length > 0) {
+        Object.keys(data.result).forEach((module) => {
+            const result = data.result[module]
+            userDB.push([
+                result.module_name,
+                JSON.stringify(result.questions)
+            ]);
+        });
+    }
+
+    if (userDB && userDB.length > 0) {
+        await insertRow(database, 'scrapers', 'ticket_modules', false);
+    }
+
     return Object.keys(data.result);
 }
 
-async function getTicketsByModule(domain: string, sessionID: string, modules: string[]): Promise<Record<string, Ticket[]>> {
-    const moduleCount = [0];
-    let totalModules = modules.length;
-    let page = [1];
-    let lastPage = [1];
-    let tickets: Ticket[] = [];
-    let allTickets: Record<string, Ticket[]>[] = [];
-
-    if (fileExists('./target/recovery/module_tickets.json')) {
-        const progress = parseJsonFile('../../target/recovery/module_tickets.json') as [Record<string, Ticket[]>[], Ticket[], string[], number[], number[], number[]];
-        allTickets = progress[0];
-        tickets = progress[1];
-        modules = progress[2];
-        totalModules = modules.length;
-        moduleCount[0] = progress[3][0];
-        page[0] = progress[4][0];
-        lastPage[0] = progress[5][0];
-    }
-
-    addExitListeners(['./target/recovery/module_tickets.json'], [[allTickets, tickets, modules, moduleCount, page, lastPage]]);
-
-    for (let i = moduleCount[0]; i < totalModules; i++) {
-        while (page[0] <= lastPage[0]) {
-            const params = {
-                session_id: sessionID,
-                preset_id: modules[i],
-                status: 'all',
-                page: page[0],
-            }
-            const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
-
-            if (data.error) {
-                console.log(`Error getting tickets for module ${modules[i]} page ${page[0]}: ${data.error.code} ${data.error.message}`)
-                break;
-            }
-
-            lastPage[0] = data.result.pagination.last_page;
-            tickets.push(...data.result.results);
-
-            console.log(`Found tickets for module ${modules[i]} page (${page[0]++}/${lastPage})...`);
-        }
-        page[0] = 1;
-        allTickets[0] = { ...allTickets[0], ...{ [modules[i]]: tickets } };
-        console.log(`Found ${tickets.length} tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules}))`);
-        tickets = [];
-    }
-
-    removeExitListeners();
-    return allTickets[0];
-}
-
-async function getTicketReplies(domain: string, sessionID: string, ticketCode: string): Promise<TicketReply[]> {
+async function getTicketReplies(domain: string, sessionID: string, ticketCode: string): Promise<[TicketReply[], boolean]> {
     let page = [1];
     let lastPage = [1];
     let replies: TicketReply[] = [];
+    let has_uploads = false;
 
     while (page[0] <= lastPage[0]) {
         const params = {
             session_id: sessionID,
             ticket_code: ticketCode,
-            page: page[0],
+            page: page[0].toString(),
         }
 
         const data = await enjinRequest<Tickets.GetReplies>(params, 'Tickets.getReplies', domain);
@@ -90,55 +61,103 @@ async function getTicketReplies(domain: string, sessionID: string, ticketCode: s
         lastPage[0] = data.result.pagination.last_page;
 
         replies.push(...data.result.results);
-
+        has_uploads = data.result.has_uploads;
         page[0]++;
     }
 
-    return replies;
+    return [replies, has_uploads];
 }
 
-export async function getAllTickets(domain: string, apiKey: string, sessionID: string): Promise<Record<string, { ticket: Ticket, replies: TicketReply[] }>> {
-    console.log('Getting all tickets...');
-    const modules = await getTicketModules(domain, apiKey);
+async function getTicketsByModule(database: Database, domain: string, sessionID: string, modules: string[]) {
+    const moduleCount = [0];
+    const ticketCount = [0];
+    let totalModules = modules.length;
+    let tickets = 0;
+    let page = [1];
+    let lastPage = [1];
 
-    console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
-    let allTickets: Record<string, Ticket[]> = {};
-
-    if(!fileExists('./target/recovery/tickets.json')) {
-        allTickets = await getTicketsByModule(domain, sessionID, modules);
+    if (fileExists('./target/recovery/module_tickets.json')) {
+        const progress = parseJsonFile('./target/recovery/module_tickets.json') as [string[], number[], number[], number[], number[]];
+        modules = progress[0];
+        totalModules = modules.length;
+        moduleCount[0] = progress[1][0];
+        ticketCount[0] = progress[2][0];
+        page[0] = progress[3][0];
+        lastPage[0] = progress[4][0];
     }
 
+    addExitListeners(['./target/recovery/module_tickets.json'], [[modules, moduleCount, ticketCount, page, lastPage]]);
 
-    let ticketsWithReplies: Record<string, { ticket: Ticket, replies: TicketReply[] }> = {};
-    let ticketCodes: [string, string, number][] = Object.values(allTickets).flatMap(memberTickets => memberTickets.map<[string, string, number]>((ticket, index) => [ticket.code, ticket.preset_id, index]));
-    let totalTicketCodes = ticketCodes.length;
-    const ticketCodesCount = [0];
+    for (let i = moduleCount[0]; i < totalModules; i++) {
+        while (page[0] <= lastPage[0]) {
+            const params = {
+                session_id: sessionID,
+                preset_id: modules[i],
+                status: 'all',
+                page: page[0].toString(),
+            }
+            const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
 
-    if (fileExists('./target/recovery/tickets.json')) {
-        const progress = parseJsonFile('./target/recovery/tickets.json') as [Record<string, Ticket[]>, Record<string, { ticket: Ticket, replies: TicketReply[] }>, [string, string, number][], number[]];
-        allTickets = progress[0];
-        ticketsWithReplies = progress[1];
-        ticketCodes = progress[2];
-        ticketCodesCount[0] = progress[3][0];
-        totalTicketCodes = ticketCodes.length;
+            if (data.error) {
+                console.log(`Error getting tickets for module ${modules[i]} page ${page[0]}: ${data.error.code} ${data.error.message}`)
+                break;
+            }
+
+            lastPage[0] = data.result.pagination.nr_pages;
+            tickets += data.result.results.length;
+            console.log(`Scraping tickets for module ${modules[i]} page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
+
+            for (let j = ticketCount[0]; j < data.result.results.length; j++) {
+                const ticket = data.result.results[j];
+                const [replies, has_uploads] = await getTicketReplies(domain, sessionID, ticket.code);
+                const values = [
+                    ticket.id,
+                    ticket.code,
+                    ticket.site_id,
+                    ticket.preset_id,
+                    ticket.subject,
+                    ticket.created,
+                    ticket.status,
+                    ticket.assignee,
+                    ticket.updated,
+                    ticket.requester,
+                    ticket.priority,
+                    ticket.extra_questions,
+                    ticket.status_change,
+                    ticket.email,
+                    ticket.viewers,
+                    ticket.createdHTML,
+                    ticket.updatedHTML,
+                    ticket.requesterHTML,
+                    ticket.assigneeText,
+                    ticket.assigneeHTML,
+                    ticket.priority_name,
+                    ticket.replies_count,
+                    ticket.private_reply_count,
+                    JSON.stringify(replies),
+                    has_uploads
+                ];
+                await insertRow(database, 'tickets', ...values);
+                console.log(`Scraping ticket ${ticket.id} (${++ticketCount[0]}/${data.result.results.length}) page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
+            }
+            ticketCount[0] = 0;
+            page[0]++;
+        }
+        page[0] = 1;
+        console.log(`Scraped all tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules})`);
+        tickets = 0;
     }
-
-    addExitListeners(['./target/recovery/tickets.json'], [[allTickets, ticketsWithReplies, ticketCodes, ticketCodesCount]]);
-
-    for (let i = ticketCodesCount[0]; i < totalTicketCodes; i++) {
-
-        const replies = await getTicketReplies(domain, sessionID, ticketCodes[i][0]);
-
-        ticketsWithReplies[ticketCodes[i][1]] = { 
-            ...ticketsWithReplies[ticketCodes[i][1]], 
-            ...{ [ticketCodes[i][0]]: 
-                { ticket: allTickets[ticketCodes[i][1]][ticketCodes[i][2]], replies } 
-            } 
-        };
-
-        console.log(`Found all replies for ticket ${ticketCodes[i][0]} (${++ticketCodesCount[0]}/${totalTicketCodes})...`);
-    }
-
     removeExitListeners();
-    return ticketsWithReplies;
+}
+
+export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string) {
+    console.log('Getting all tickets...');
+    let modules: string[];
+    if (fileExists('./target/recovery/module_tickets.json')) {
+        modules = [];
+    } else {
+        modules = await getTicketModules(database, domain, apiKey);
+    }
+    console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
+    await getTicketsByModule(database, domain, sessionID, modules);
 }
