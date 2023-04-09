@@ -2,8 +2,10 @@ import { Database } from 'sqlite3';
 import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
 import { insertRow, insertRows } from '../util/database';
+import { getAllUserTags } from './usertags';
 
 export async function getUsers(database: Database, domain: string, apiKey: string) {
+    const allUserTags = await getAllUserTags(domain, apiKey);
     console.log('Getting all users...');
     await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};
@@ -66,7 +68,7 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                     user.points_other,
                     user.points_spent,
                     user.points_decayed,
-                    null,
+                    userID in allUserTags ? JSON.stringify(allUserTags[userID]) : null,
                     user.points_adjusted
                 ]);
             });

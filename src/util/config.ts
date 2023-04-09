@@ -38,8 +38,7 @@ const defaultConfig: Config = {
         news: false,
         tickets: false,
         applications: false,
-        users: false,
-        usertags: true
+        users: false
     },
     debug: false
 };
