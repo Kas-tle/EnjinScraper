@@ -32,7 +32,7 @@ This can be obtained in the admin panel of your site under "Modules". Using the 
 
 This can be obtained in the admin panel of your site under "Modules". Using the left side panel, you can filter to the type "News / Blog". Make a list of the Module IDs you wish to scrape in the `config.json` file as shown below.
 
-#### Configuring the `config.json` file and `credentials.json`
+#### Configuring the `config.json`
 
 Create a `config.json` file in the root directory of the project. The file should look like this:
 
@@ -60,18 +60,6 @@ Create a `config.json` file in the root directory of the project. The file shoul
         "usertags": true
     },
     "debug": false
-}
-```
-
-You may also store your sensitve credential data in a seperate file, `credentials.json`, formatted as follows:
-
-```json
-{
-    "apiKey": "someapiKey",
-    "domain": "www.example.com",
-    "email": "someemail@email.com",
-    "password": "somepassword",
-    "sessionID": "someSessionID"
 }
 ```
 

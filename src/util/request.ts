@@ -12,7 +12,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
     while (retries < 5) {
         try {
             const qid = (++id).toString().padStart(7, '0');
-            const { data } = await axios.post<EnjinResponse<T>>(
+            const { data, headers } = await axios.post<EnjinResponse<T>>(
                 `https://${domain}/api/v1/api.php`,
                 {
                     jsonrpc: '2.0',
@@ -28,7 +28,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
                 params.hasOwnProperty('password') && (params.password = '***');
                 params.hasOwnProperty('email') && (params.email = '***');
                 params.hasOwnProperty('api_key') && (params.api_key = '***');
-                writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, {request: (params), data: data})
+                writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, {request: (params), headers, data: data})
             }
 
             return data;

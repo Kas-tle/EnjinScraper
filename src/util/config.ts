@@ -50,9 +50,9 @@ export async function getConfig(): Promise<Config> {
         return cachedConfig;
     }
     try {
-        const credentialsData = await fs.promises.readFile("credentials.json", "utf-8");
+        //const credentialsData = await fs.promises.readFile("credentials.json", "utf-8");
         const configData = await fs.promises.readFile("config.json", "utf-8");
-        const config = {...JSON.parse(configData), ...JSON.parse(credentialsData)};
+        const config = JSON.parse(configData);
         cachedConfig = config;
         return config;
     } catch (err) {

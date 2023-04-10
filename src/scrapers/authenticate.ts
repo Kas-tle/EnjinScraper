@@ -16,19 +16,9 @@ export async function authenticate(domain: string, email: string, password: stri
         throw new Error(`Error authenticating: ${data.error.code} ${data.error.message}`);
     }
 
-    const credentialsPath = path.join(process.cwd(), './credentials.json');
-    const configPath = path.join(process.cwd(), './config.json');
-    
-    let credentials;
-    
-    if (fs.existsSync(credentialsPath)) {
-        credentials = JSON.parse(fs.readFileSync(credentialsPath).toString());
-    } else {
-        credentials = JSON.parse(fs.readFileSync(configPath).toString());
-    }
-    
-    credentials.sessionID = data.result.session_id;
-    fs.writeFileSync(configPath, JSON.stringify(credentials, null, 4));
+    const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), './config.json')).toString());
+    config.sessionID = data.result.session_id;
+    fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
 
     return data.result.session_id;
 }
