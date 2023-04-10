@@ -1,6 +1,5 @@
 import { Database } from 'sqlite3';
-import { Forum, ForumStats, ForumsDB, PostsDB, ThreadPosts, ThreadStats, ThreadsDB } from '../interfaces/forum';
-import { getErrorMessage } from '../util/error';
+import { Forum, ForumStats, ForumsDB, PostsDB, ThreadPosts, ThreadsDB } from '../interfaces/forum';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';

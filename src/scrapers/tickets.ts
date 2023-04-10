@@ -1,6 +1,6 @@
 import { Database } from 'sqlite3';
-import { Ticket, TicketReply, Tickets } from '../interfaces/tickets';
-import { insertRow, insertRows } from '../util/database';
+import { TicketReply, Tickets } from '../interfaces/tickets';
+import { insertRow } from '../util/database';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';

@@ -1,33 +1,16 @@
 import { Database } from 'sqlite3';
-import { UserAdmin, UserAdminUser } from '../interfaces/useradmin';
+import { UserAdmin } from '../interfaces/useradmin';
 import { enjinRequest } from '../util/request';
 import { insertRow, insertRows } from '../util/database';
 import { getAllUserTags } from './usertags';
+import { UsersDB } from '../interfaces/user';
 
 export async function getUsers(database: Database, domain: string, apiKey: string, disableUserTags = false) {
-    const allUserTags = disableUserTags ? {} : await getAllUserTags(domain, apiKey);
+    const allUserTags = await getAllUserTags(domain, apiKey, disableUserTags);
     console.log('Getting all users...');
     await insertRow(database, 'scrapers', 'users', false);
     let result: UserAdmin.Get = {};
-    const userDB: [
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string, 
-        string | null, 
-        string
-    ][] = [];
+    const userDB: UsersDB[] = [];
 
     let page = 1;
 

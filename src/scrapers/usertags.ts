@@ -19,7 +19,11 @@ async function getUserTags(domain: string, apiKey: string, userID: string): Prom
     return data.result;
 }
 
-export async function getAllUserTags(domain: string, apiKey: string): Promise<Record<string, UserAdmin.GetUserTags>> {
+export async function getAllUserTags(domain: string, apiKey: string, disableUserTags: boolean): Promise<Record<string, UserAdmin.GetUserTags>> {
+    if (disableUserTags) {
+        return {}
+    };
+    
     console.log('Getting all user tags...');
     let taggedUsers: string[] = [];
 

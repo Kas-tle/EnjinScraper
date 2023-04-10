@@ -32,7 +32,7 @@ This can be obtained in the admin panel of your site under "Modules". Using the 
 
 This can be obtained in the admin panel of your site under "Modules". Using the left side panel, you can filter to the type "News / Blog". Make a list of the Module IDs you wish to scrape in the `config.json` file as shown below.
 
-#### Configuring the `config.json` file
+#### Configuring the `config.json` file and `credentials.json`
 
 Create a `config.json` file in the root directory of the project. The file should look like this:
 
@@ -58,7 +58,20 @@ Create a `config.json` file in the root directory of the project. The file shoul
         "applications": false,
         "users": false,
         "usertags": true
-    }
+    },
+    "debug": false
+}
+```
+
+You may also store your sensitve credential data in a seperate file, `credentials.json`, formatted as follows:
+
+```json
+{
+    "apiKey": "someapiKey",
+    "domain": "www.example.com",
+    "email": "someemail@email.com",
+    "password": "somepassword",
+    "sessionID": "someSessionID"
 }
 ```
 
@@ -70,7 +83,17 @@ npx ts-node index.ts
 
 ## Outputs
 
-The scraper will output a single json file for each module scraped in the `target` directory. This may be improved in the future with some sort of database export type.
+The scraper will output an sqlite file at `target/site.sqlite` in the root directory of the project. For a more detailed database schema, see [OUTPUTS.md](OUTPUTS.md). The database will contain the following tables:
+- `scrapers`: Contains information about what steps have been completed to gracefully resume scraping if needed.
+- `forum_modules`: Contains information about the forum modules that were scraped
+- `forums`: Contains information about the forums scraped from the forum modules
+- `threads`: Contains information about the threads scraped from the forums
+- `posts`: Contains information about the posts scraped from the forums
+- `news_articles`: Contains information about news articles scraped from the news modules
+- `ticket_modules`: Contains information about ticket modules
+- `tickets`: Contains information about tickets scraped from the ticket modules
+- `applications`: Contains information about applications
+- `users`: Contains information about users
 
 ## TODO
 
@@ -78,5 +101,4 @@ The scraper will output a single json file for each module scraped in the `targe
 - [ ] Add support for downloading referenced images and attachments (https://github.com/Kas-tle/EnjinScraper/issues/4)
 - [ ] Add more options for user data scraping (https://github.com/Kas-tle/EnjinScraper/issues/8)
 - [ ] Add support for scraping galleries (https://github.com/Kas-tle/EnjinScraper/issues/6)
-- [ ] Add support for scraping ticket replies (https://github.com/Kas-tle/EnjinScraper/issues/1)
 - [ ] Export to database
