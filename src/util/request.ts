@@ -47,3 +47,44 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
+
+const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
+
+export async function getRequest(domain: string, url: string, headers?: any): Promise<any> {
+    try {
+        const response = await axios.get(url, {
+            baseURL: `https://${domain}`,
+            headers: {
+                'User-Agent': userAgent,
+                'Accept-Encoding': 'html',
+                ...headers,
+            },
+        });
+        return response;
+    } catch (error: any) {
+        console.error(`Error in getRequest: ${error.message}`);
+        throw error;
+    }
+}
+
+export async function postRequest(domain: string, url: string, data: any, headers?: any): Promise<any> {
+    try {
+        const response = await axios.post(url, data, {
+            baseURL: `https://${domain}`,
+            headers: {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                ...headers,
+            },
+            maxRedirects: 0,
+            validateStatus: function (_status) {
+                return true; // Always return true to allow handling of all status codes
+            }
+        });
+        return response;
+    } catch (error: any) {
+        console.error(`Error in postRequest: ${error.message}`);
+        throw error;
+    }
+}

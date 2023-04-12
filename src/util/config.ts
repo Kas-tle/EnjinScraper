@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { SiteAuth } from '../interfaces/generic';
 
 interface Config {
     apiKey: string;
@@ -6,6 +7,7 @@ interface Config {
     email: string;
     password: string;
     sessionID?: string;
+    siteAuth: SiteAuth;
     forumModuleIDs?: string[];
     newsModuleIDs?: string[];
     disabledModules?: {
@@ -25,6 +27,10 @@ const defaultConfig: Config = {
     email: "someemail@email.com",
     password: "somepassword",
     sessionID: "someSessionID",
+    siteAuth: {
+        phpSessID: "somePHPSESSID",
+        csrfToken: "someCSRFToken"
+    },
     forumModuleIDs: [
         "1000001",
         "1000002"

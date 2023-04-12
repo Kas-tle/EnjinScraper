@@ -216,7 +216,8 @@ export const tableSchemas: TableSchema[] = [
             'replies_count INTEGER',
             'private_reply_count INTEGER',
             'replies JSON',
-            'has_uploads BOOLEAN'
+            'has_uploads BOOLEAN',
+            'uploads JSON'
         ],
     },
 

@@ -1,10 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+import * as cheerio from 'cheerio';
 import { Site } from "../interfaces/site";
 import { User } from "../interfaces/user";
-import { enjinRequest } from '../util/request';
+import { enjinRequest, getRequest, postRequest } from '../util/request';
+import { SiteAuth } from '../interfaces/generic';
 
-export async function authenticate(domain: string, email: string, password: string): Promise<string> {
+export async function authenticateAPI(domain: string, email: string, password: string): Promise<string> {
     const params = {
         email,
         password,
@@ -21,6 +23,41 @@ export async function authenticate(domain: string, email: string, password: stri
     fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
 
     return data.result.session_id;
+}
+
+export async function authenticateSite(domain: string, email: string, password: string): Promise<SiteAuth> {
+    const loginResponse = await getRequest(domain, '/login');
+    const setCookie = loginResponse.headers['set-cookie'];
+    const cf_bm_token = setCookie.find((cookie: string) => cookie.includes('__cf_bm')).split(';')[0];
+    const lastviewed = setCookie.find((cookie: string) => cookie.includes('lastviewed')).split(';')[0];
+
+    const $ = cheerio.load(loginResponse.data);
+    const formName = $('div.input input[type="password"]').attr('name');
+
+    const formData = new URLSearchParams({
+        m: '0',
+        do: '',
+        username: email,
+        [formName!]: password
+    });
+
+    const postLoginResponse = await postRequest(domain, '/login', formData, {
+        Cookie: `${lastviewed}; enjin_browsertype=web; ${cf_bm_token}`,
+    });
+
+    const phpSessID = postLoginResponse.headers['set-cookie'].find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
+
+    const homeResponse = await getRequest(domain, '/', {
+        Cookie: `${lastviewed}; ${phpSessID}; enjin_browsertype=web; ${cf_bm_token}; login_temp=1`,
+    });
+
+    const csrfToken = homeResponse.headers['set-cookie'].find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
+
+    const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), './config.json')).toString());
+    config.siteAuth = { phpSessID, csrfToken };
+    fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
+
+    return { phpSessID, csrfToken };
 }
 
 export async function getSiteID(domain: string): Promise<string> {

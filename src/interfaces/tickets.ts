@@ -79,3 +79,10 @@ export interface TicketReply {
     createdHTML: string;
     username: string;
 }
+
+export interface TicketUpload {
+    href: string;
+    uploader: string;
+    filename: string;
+    timestamp: number;
+}

@@ -1,9 +1,11 @@
+import * as cheerio from 'cheerio';
 import { Database } from 'sqlite3';
-import { TicketReply, Tickets } from '../interfaces/tickets';
+import { TicketReply, TicketUpload, Tickets } from '../interfaces/tickets';
 import { insertRow } from '../util/database';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
-import { enjinRequest } from '../util/request';
+import { enjinRequest, getRequest } from '../util/request';
+import { SiteAuth } from '../interfaces/generic';
 
 async function getTicketModules(database: Database, domain: string, apiKey: string): Promise<string[]> {
 
@@ -68,7 +70,7 @@ async function getTicketReplies(domain: string, sessionID: string, ticketCode: s
     return [replies, has_uploads];
 }
 
-async function getTicketsByModule(database: Database, domain: string, sessionID: string, modules: string[]) {
+async function getTicketsByModule(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, modules: string[]) {
     const moduleCount = [0];
     const ticketCount = [0];
     let totalModules = modules.length;
@@ -135,8 +137,13 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                     ticket.replies_count,
                     ticket.private_reply_count,
                     JSON.stringify(replies),
-                    has_uploads
+                    has_uploads,
+                    null
                 ];
+                if (has_uploads) {
+                    const uploads = await getTicketUploads(domain, siteAuth, ticket.code, ticket.preset_id);
+                    values[values.length-1] = JSON.stringify(uploads);
+                }
                 await insertRow(database, 'tickets', ...values);
                 console.log(`Scraping ticket ${ticket.id} (${++ticketCount[0]}/${data.result.results.length}) page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
             }
@@ -150,7 +157,31 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
     removeExitListeners();
 }
 
-export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string) {
+async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: string, ticketModule: String): Promise<TicketUpload[]> {
+    const homeResponse = await getRequest(domain, `/ajax.php?code=${ticketCode}&s=editmodule_tickets&cmd=ticket_html&preset_id=${ticketModule}&saved_data%5Bmode%5D=public`, {
+        Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+    });
+
+    const uploads: TicketUpload[] = [];
+    const $ = cheerio.load(homeResponse.data);
+
+    $(".uploads-container .each-upload").each((_index, element) => {
+        const $element = $(element);
+        const href = $element.find("a").attr("href");
+        if (href) {
+            const uploader = $element.find(".uploaded-by-column .element_username").text();
+            const filename = $element.find(".float-left a").text().trim();
+            const timestamp = parseInt(href.split("-")[1], 10);
+            uploads.push({ href, uploader, filename, timestamp });
+        }
+    });
+
+    console.log(`Found ${uploads.length} uploads for ticket ${ticketCode}.`)
+
+    return uploads;
+}
+
+export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string, siteAuth: SiteAuth) {
     console.log('Getting all tickets...');
     let modules: string[];
     if (fileExists('./target/recovery/module_tickets.json')) {
@@ -159,5 +190,5 @@ export async function getAllTickets(database: Database, domain: string, apiKey: 
         modules = await getTicketModules(database, domain, apiKey);
     }
     console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
-    await getTicketsByModule(database, domain, sessionID, modules);
+    await getTicketsByModule(database, domain, sessionID, siteAuth, modules);
 }

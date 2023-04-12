@@ -34,3 +34,8 @@ export interface Pagination {
     first_page: number;
     last_page: number;
 }
+
+export interface SiteAuth {
+    phpSessID: string;
+    csrfToken: string;
+}

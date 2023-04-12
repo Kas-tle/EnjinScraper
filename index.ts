@@ -1,7 +1,7 @@
 import { getConfig } from './src/util/config';
-import { deleteFiles, ensureDirectory, fileExists, writeJsonFile } from './src/util/files';
+import { deleteFiles, ensureDirectory } from './src/util/files';
 import { databaseConnection, initializeTables, insertRow, isModuleScraped } from './src/util/database';
-import { authenticate, getSiteID } from './src/scrapers/authenticate';
+import { authenticateAPI, authenticateSite, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
@@ -15,9 +15,11 @@ async function main(): Promise<void> {
     // Get config
     const config = await getConfig();
 
-    // Log in and get session ID
-    const sessionID = config.sessionID ? config.sessionID : await authenticate(config.domain, config.email, config.password);
-    //console.log(`Session ID: ${sessionID}`);
+    // Login to API and get session ID
+    const sessionID = config.sessionID ? config.sessionID : await authenticateAPI(config.domain, config.email, config.password);
+    
+    // Login to site and get PHPSESSID and csrf_token
+    const siteAuth = config.siteAuth ? config.siteAuth : await authenticateSite(config.domain, config.email, config.password);
 
     // Get site ID
     const siteID = await getSiteID(config.domain);
@@ -60,7 +62,7 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'tickets')) {
         console.log('Tickets already scraped, skipping ticket scraping...');
     } else {
-        await getAllTickets(database, config.domain, config.apiKey, sessionID);
+        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth);
         await insertRow(database, 'scrapers', 'tickets', true);
         deleteFiles(['./target/recovery/module_tickets.json']);
     }
