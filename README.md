@@ -81,6 +81,7 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `ticket_modules`: Contains information about ticket modules
 - `tickets`: Contains information about tickets scraped from the ticket modules
 - `applications`: Contains information about applications
+- `comments`: Contains information about comments on applications and news articles
 - `users`: Contains information about users
 
 ## TODO

@@ -12,6 +12,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "async-mutex": "^0.4.0",
     "axios": "^1.3.3",
     "cheerio": "^1.0.0-rc.12",
     "sqlite3": "^5.1.6"

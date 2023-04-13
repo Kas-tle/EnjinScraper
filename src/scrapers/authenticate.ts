@@ -28,8 +28,8 @@ export async function authenticateAPI(domain: string, email: string, password: s
 export async function authenticateSite(domain: string, email: string, password: string): Promise<SiteAuth> {
     const loginResponse = await getRequest(domain, '/login');
     const setCookie = loginResponse.headers['set-cookie'];
-    const cf_bm_token = setCookie.find((cookie: string) => cookie.includes('__cf_bm')).split(';')[0];
-    const lastviewed = setCookie.find((cookie: string) => cookie.includes('lastviewed')).split(';')[0];
+    const cf_bm_token = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+    const lastviewed = setCookie!.find((cookie: string) => cookie.includes('lastviewed'))!.split(';')[0];
 
     const $ = cheerio.load(loginResponse.data);
     const formName = $('div.input input[type="password"]').attr('name');
@@ -45,13 +45,13 @@ export async function authenticateSite(domain: string, email: string, password: 
         Cookie: `${lastviewed}; enjin_browsertype=web; ${cf_bm_token}`,
     });
 
-    const phpSessID = postLoginResponse.headers['set-cookie'].find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
+    const phpSessID = postLoginResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
 
     const homeResponse = await getRequest(domain, '/', {
         Cookie: `${lastviewed}; ${phpSessID}; enjin_browsertype=web; ${cf_bm_token}; login_temp=1`,
     });
 
-    const csrfToken = homeResponse.headers['set-cookie'].find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
+    const csrfToken = homeResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
 
     const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), './config.json')).toString());
     config.siteAuth = { phpSessID, csrfToken };

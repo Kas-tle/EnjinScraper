@@ -166,6 +166,7 @@ export const tableSchemas: TableSchema[] = [
         name: 'news_articles',
         schema: [
             'article_id TEXT PRIMARY KEY',
+            'module_id TEXT',
             'user_id TEXT',
             'num_comments INTEGER',
             'timestamp TEXT',
@@ -177,7 +178,38 @@ export const tableSchemas: TableSchema[] = [
             'sticky TEXT',
             'last_updated TEXT',
             'username TEXT',
-            'displayname TEXT'
+            'displayname TEXT',
+            'comment_cid TEXT',
+        ],
+    },
+
+    // Comments (News and Applications)
+    {
+        name: 'comments',
+        schema: [
+            'comment_cid TEXT',
+            'comment_id TEXT PRIMARY KEY',
+            'user_id TEXT',
+            'guest_ip TEXT',
+            'guest_name TEXT',
+            'timestamp TEXT',
+            'content TEXT',
+            'status TEXT',
+            'category TEXT',
+            'parent_comment_id TEXT',
+            'likes_user_ids JSON',
+            'likes JSON',
+            'likes_users TEXT',
+            'likes_users_full TEXT',
+            'ajax_like TEXT',
+            'can_delete BOOLEAN',
+            'can_reply BOOLEAN',
+            'avatar TEXT',
+            'username TEXT',
+            'time TEXT',
+            'can_like BOOLEAN',
+            'like_text TEXT',
+            'tag_post_color BOOLEAN'
         ],
     },
 
@@ -254,7 +286,8 @@ export const tableSchemas: TableSchema[] = [
             'is_trashed BOOLEAN',
             'allow_app_comments STRING',
             'post_app_comments BOOLEAN',
-            'allow_admin_comments BOOLEAN'
+            'allow_admin_comments BOOLEAN',
+            'comment_cid TEXT',
         ],
     },
 

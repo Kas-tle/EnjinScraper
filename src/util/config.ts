@@ -15,6 +15,7 @@ interface Config {
         news?: boolean;
         tickets?: boolean;
         applications?: boolean;
+        comments?: boolean;
         users?: boolean;
         usertags?: boolean;
     };
@@ -44,6 +45,7 @@ const defaultConfig: Config = {
         news: false,
         tickets: false,
         applications: false,
+        comments: false,
         users: false
     },
     debug: false

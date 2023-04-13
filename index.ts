@@ -7,6 +7,7 @@ import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
 import { getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
+import { getComments } from './src/scrapers/comments';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
         console.log('Forums already scraped, skipping forum scraping...');
     } else {
         await getForums(database, config.domain, sessionID, config.forumModuleIDs);
+        await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
     }
 
@@ -52,8 +54,30 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'news')) {
         console.log('News already scraped, skipping news scraping...');
     } else {
-        await getNews(database, config.domain, sessionID, config.newsModuleIDs);
+        await getNews(database, config.domain, sessionID, siteAuth, config.newsModuleIDs);
         await insertRow(database, 'scrapers', 'news', true);
+    }
+
+    // Get applications
+    if (config.disabledModules?.applications) {
+        console.log('Applications module disabled, skipping application scraping.');
+    } else if (await isModuleScraped(database, 'applications')) {
+        console.log('Applications already scraped, skipping application scraping...');
+    } else {
+        await getApplications(database, config.domain, sessionID, siteAuth, siteID);
+        await insertRow(database, 'scrapers', 'applications', true);
+        deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
+    }
+
+    // Get comments (from applications and news posts)
+    if (config.disabledModules?.comments || (config.disabledModules?.news && config.disabledModules?.applications)) {
+        console.log('Comments module disabled, skipping comment scraping.');
+    } else if (await isModuleScraped(database, 'comments')) {
+        console.log('Comments already scraped, skipping comment scraping...');
+    } else {
+        await getComments(database, config.domain, siteAuth)
+        await insertRow(database, 'scrapers', 'comments', true);
+        deleteFiles(['./target/recovery/comments.json']);
     }
 
     // Get tickets
@@ -65,17 +89,6 @@ async function main(): Promise<void> {
         await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth);
         await insertRow(database, 'scrapers', 'tickets', true);
         deleteFiles(['./target/recovery/module_tickets.json']);
-    }
-
-    // Get applications
-    if (config.disabledModules?.applications) {
-        console.log('Applications module disabled, skipping application scraping.');
-    } else if (await isModuleScraped(database, 'applications')) {
-        console.log('Applications already scraped, skipping application scraping...');
-    } else {
-        await getApplications(database, config.domain, sessionID, siteID);
-        await insertRow(database, 'scrapers', 'applications', true);
-        deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
     }
 
     // Get users

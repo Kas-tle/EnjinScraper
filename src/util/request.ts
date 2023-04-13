@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+import { Mutex } from 'async-mutex';
 import { getConfig } from './config';
 import { getErrorMessage } from "./error";
 import { EnjinResponse, Params } from "../interfaces/generic";
@@ -28,7 +29,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
                 params.hasOwnProperty('password') && (params.password = '***');
                 params.hasOwnProperty('email') && (params.email = '***');
                 params.hasOwnProperty('api_key') && (params.api_key = '***');
-                writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, {request: (params), headers, data: data})
+                writeJsonFile(`./target/debug/${method.split('.').join('/')}/${qid}.json`, { request: (params), headers, data: data })
             }
 
             return data;
@@ -50,41 +51,84 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
 
-export async function getRequest(domain: string, url: string, headers?: any): Promise<any> {
-    try {
-        const response = await axios.get(url, {
-            baseURL: `https://${domain}`,
-            headers: {
-                'User-Agent': userAgent,
-                'Accept-Encoding': 'html',
-                ...headers,
-            },
-        });
-        return response;
-    } catch (error: any) {
-        console.error(`Error in getRequest: ${error.message}`);
-        throw error;
+export async function getRequest(domain: string, url: string, headers?: any): Promise<AxiosResponse> {
+    let retries = 0;
+    while (retries < 5) {
+        try {
+            const response = await axios.get(url, {
+                baseURL: `https://${domain}`,
+                headers: {
+                    'User-Agent': userAgent,
+                    'Accept-Encoding': 'html',
+                    ...headers,
+                },
+            });
+            return response;
+        } catch (error: any) {
+            if (error.response && error?.response.status === 429) {
+                console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            } else {
+                console.log(`Error making get request: ${getErrorMessage(error)}`);
+                throw error;
+            }
+        }
     }
+    console.log(`Cloudflare rate limit exceeded. Please try again later. Exiting...`)
+    process.kill(process.pid, 'SIGINT');
+    return Promise.reject();
 }
 
-export async function postRequest(domain: string, url: string, data: any, headers?: any): Promise<any> {
-    try {
-        const response = await axios.post(url, data, {
-            baseURL: `https://${domain}`,
-            headers: {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                ...headers,
-            },
-            maxRedirects: 0,
-            validateStatus: function (_status) {
-                return true; // Always return true to allow handling of all status codes
+const rateLimiterMutex = new Mutex();
+let lastCallTime = 0;
+
+export async function throttledGetRequest(domain: string, url: string, headers?: any): Promise<AxiosResponse> {
+    await rateLimiterMutex.runExclusive(async () => {
+        const currentTime = Date.now();
+        const timeSinceLastCall = currentTime - lastCallTime;
+        const timeToWait = Math.max(0, 25 - timeSinceLastCall);
+
+        if (timeToWait > 0) {
+            await new Promise((resolve) => setTimeout(resolve, timeToWait));
+        }
+
+        lastCallTime = Date.now();
+    });
+
+    return getRequest(domain, url, headers);
+}
+
+export async function postRequest(domain: string, url: string, data: any, headers?: any): Promise<AxiosResponse> {
+    let retries = 0;
+    while (retries < 5) {
+        try {
+            const response = await axios.post(url, data, {
+                baseURL: `https://${domain}`,
+                headers: {
+                    'User-Agent': userAgent,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    ...headers,
+                },
+                maxRedirects: 0,
+                validateStatus: function (_status) {
+                    return true; // Always return true to allow handling of all status codes
+                }
+            });
+            return response;
+        } catch (error: any) {
+            if (error.response && error?.response.status === 429) {
+                console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            } else {
+                console.log(`Error making post request: ${getErrorMessage(error)}`);
+                throw error;
             }
-        });
-        return response;
-    } catch (error: any) {
-        console.error(`Error in postRequest: ${error.message}`);
-        throw error;
+        }
     }
+    console.log(`Cloudflare rate limit exceeded. Please try again later. Exiting...`)
+    process.kill(process.pid, 'SIGINT');
+    return Promise.reject();
 }

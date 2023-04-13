@@ -1,10 +1,12 @@
+import * as cheerio from 'cheerio';
 import { Applications } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
-import { enjinRequest } from '../util/request';
+import { enjinRequest, getRequest } from '../util/request';
 import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
 import { Database } from 'sqlite3';
 import { insertRow } from '../util/database';
+import { SiteAuth } from '../interfaces/generic';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
     const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
@@ -57,7 +59,29 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
     return applicationIDs;
 }
 
-export async function getApplications(database: Database, domain: string, sessionID: string, siteID: string) {
+async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, applicationID: string): Promise<string | null> {
+    const applicationResonse = await getRequest(domain, `/ajax.php?s=dashboard_applications&cmd=app&app_id=${applicationID}`, {
+        Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+        Referer: `Referer https://${domain}/dashboard/applications/application?app_id=${applicationID}`
+    })
+
+    let commentCid = null;
+
+    const $ = cheerio.load(applicationResonse.data);
+    const commentsPostContainer = $('.comments_post_container');
+    if (commentsPostContainer.length > 0) {
+        const dataUrl = commentsPostContainer.attr('data-url');
+        const cidMatch = dataUrl!.match(/cid=(\d+)/);
+        if (cidMatch && cidMatch[1]) {
+            commentCid = cidMatch[1];
+        }
+    }
+
+    console.log(`Found comment cid ${commentCid} for application ${applicationID}`);
+    return commentCid;
+}
+
+export async function getApplications(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {
     console.log('Getting applications...');
     await insertRow(database, 'scrapers', 'applications', false);
 
@@ -104,31 +128,30 @@ export async function getApplications(database: Database, domain: string, sessio
             }
 
             const { result } = data;
-            await insertRow(
-                database,
-                'applications', 
-                result.application_id, 
-                result.site_id, 
-                result.preset_id, 
-                result.title, 
-                result.user_ip, 
-                result.is_mine, 
-                result.can_manage, 
-                result.created, 
-                result.updated, 
-                result.read, 
-                result.comments, 
-                result.read_comments, 
-                result.app_comments, 
-                result.admin_comments, 
-                result.site_name, 
-                result.user_id, 
-                result.is_online, 
-                result.admin_online, 
-                result.username, 
-                result.avatar, 
-                result.admin_user_id, 
-                result.admin_username, 
+
+            const values = [
+                result.application_id,
+                result.site_id,
+                result.preset_id,
+                result.title,
+                result.user_ip,
+                result.is_mine,
+                result.can_manage,
+                result.created,
+                result.updated,
+                result.read,
+                result.comments,
+                result.read_comments,
+                result.app_comments,
+                result.admin_comments,
+                result.site_name,
+                result.user_id,
+                result.is_online,
+                result.admin_online,
+                result.username,
+                result.avatar,
+                result.admin_user_id,
+                result.admin_username,
                 result.admin_avatar,
                 result.site_logo,
                 JSON.stringify(result.user_data),
@@ -136,7 +159,19 @@ export async function getApplications(database: Database, domain: string, sessio
                 result.is_trashed,
                 result.allow_app_comments,
                 result.post_app_comments,
-                result.allow_admin_comments
+                result.allow_admin_comments,
+                null
+            ]
+
+            if (result.comments > 0) {
+                const commentCid = await getApplicationCommentsCid(domain, siteAuth, result.application_id);
+                values[values.length - 1] = commentCid;
+            }
+
+            await insertRow(
+                database,
+                'applications',
+                ...values
             ).then(() => {
                 const index = remainingApplicationIDs.indexOf(id);
                 if (index !== -1) {

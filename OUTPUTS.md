@@ -15,6 +15,8 @@
       - [Tickets](#tickets-1)
     + [Applications](#applications)
       - [Applications](#applications-1)
+    + [Comments](#comments)
+      - [Comments](#comments-1)
     + [Users](#users)
       - [Users](#users-1)
   * [Images](#images)
@@ -187,6 +189,7 @@ These tables are used to store information about the news modules that were scra
 
 - `news_articles`: Contains information about news articles
     - `article_id`: The ID of the news article (`TEXT PRIMARY KEY`)
+    - `module_id`: The ID of the news module the news article belongs to (`TEXT`)
     - `user_id`: The ID of the user who posted the news article (`TEXT`)
     - `num_comments`: The number of comments on the news article (`INTEGER`)
     - `timestamp`: The timestamp of the news article (`TEXT`)
@@ -199,6 +202,7 @@ These tables are used to store information about the news modules that were scra
     - `last_updated`: The timestamp of the last update of the news article (`TEXT`)
     - `username`: The username of the user who posted the news article (`TEXT`)
     - `displayname`: The display name of the user who posted the news article (`TEXT`)
+    - `comment_cid`: The comment container id for comments on the news article (`TEXT`)
 
 ### Tickets
 
@@ -276,6 +280,38 @@ These tables are used to store information about the applications that were scra
     - `allow_app_comments`: Whether or not app comments are allowed (`STRING`)
     - `post_app_comments`: Whether or not app comments can be posted (`BOOLEAN`)
     - `allow_admin_comments`: Whether or not admin comments are allowed (`BOOLEAN`)
+    - `comment_cid`: The comment container id for comments on the application (`TEXT`)
+
+### Comments
+
+These tables are used to store information about the comments on applications and news articles that were scraped.
+
+#### Comments
+
+- `comments`: Contains information about comments
+    - `comment_cid`: The comment CID (`TEXT`)
+    - `comment_id`: The comment ID (`TEXT PRIMARY KEY`)
+    - `user_id`: The ID of the user who posted the comment (`TEXT`)
+    - `guest_ip`: The IP address of the guest who posted the comment (`TEXT`)
+    - `guest_name`: The name of the guest who posted the comment (`TEXT`)
+    - `timestamp`: The timestamp of when the comment was posted (`TEXT`)
+    - `content`: The content of the comment (`TEXT`)
+    - `status`: The status of the comment (`TEXT`)
+    - `category`: The category of the comment (`TEXT`)
+    - `parent_comment_id`: The ID of the parent comment (`TEXT`)
+    - `likes_user_ids`: The IDs of the users who liked the comment (`JSON`)
+    - `likes`: The number of likes the comment has (`JSON`)
+    - `likes_users`: The users who liked the comment (`TEXT`)
+    - `likes_users_full`: The full user information of the users who liked the comment (`TEXT`)
+    - `ajax_like`: Whether or not the comment can be liked (`TEXT`)
+    - `can_delete`: Whether or not the comment can be deleted (`BOOLEAN`)
+    - `can_reply`: Whether or not the comment can be replied to (`BOOLEAN`)
+    - `avatar`: The avatar of the user who posted the comment (`TEXT`)
+    - `username`: The username of the user who posted the comment (`TEXT`)
+    - `time`: The time of when the comment was posted (`TEXT`)
+    - `can_like`: Whether or not the user can like the comment (`BOOLEAN`)
+    - `like_text`: The text for the like button (`TEXT`)
+    - `tag_post_color`: Whether or not the tag post color is enabled (`BOOLEAN`)
 
 ### Users
 
