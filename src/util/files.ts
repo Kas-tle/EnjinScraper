@@ -27,7 +27,26 @@ export function writeJsonFile(filename: string, data: any): void {
     } catch (error) {
         console.error(`Failed to write file ${filename}: ${getErrorMessage(error)}`);
         if (error instanceof RangeError) {
-            console.log('Yeahhhhhhh we should reallly use SQLite or something');
+            console.log('File too big. You hate to see it.');
+
+        }
+    }
+}
+
+export function writeTextFile(filename: string, data: any): void {
+    try {
+        const filePath = path.join(process.cwd(), filename);
+        const dirPath = path.dirname(filePath);
+
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+
+        fs.writeFileSync(filePath, data);
+    } catch (error) {
+        console.error(`Failed to write file ${filename}: ${getErrorMessage(error)}`);
+        if (error instanceof RangeError) {
+            console.log('File too big. You hate to see it.');
 
         }
     }

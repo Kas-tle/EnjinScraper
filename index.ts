@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     }
 
     // Get comments (from applications and news posts)
-    if (config.disabledModules?.comments || (config.disabledModules?.news && config.disabledModules?.applications)) {
+    if (config.disabledModules?.comments) {
         console.log('Comments module disabled, skipping comment scraping.');
     } else if (await isModuleScraped(database, 'comments')) {
         console.log('Comments already scraped, skipping comment scraping...');

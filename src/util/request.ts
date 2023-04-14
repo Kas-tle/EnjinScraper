@@ -11,8 +11,8 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
+        const qid = (++id).toString().padStart(7, '0');
         try {
-            const qid = (++id).toString().padStart(7, '0');
             const { data, headers } = await axios.post<EnjinResponse<T>>(
                 `https://${domain}/api/v1/api.php`,
                 {
@@ -39,7 +39,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making request: ${getErrorMessage(error)}`);
+                console.log(`Error making request ${qid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
@@ -51,9 +51,11 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
 
-export async function getRequest(domain: string, url: string, headers?: any): Promise<AxiosResponse> {
+export async function getRequest(domain: string, url: string, headers: any, debugPath=''): Promise<AxiosResponse> {
+    const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
+        const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.get(url, {
                 baseURL: `https://${domain}`,
@@ -63,6 +65,17 @@ export async function getRequest(domain: string, url: string, headers?: any): Pr
                     ...headers,
                 },
             });
+
+            if (config.debug) {
+                writeJsonFile(`./target/debug/get${debugPath}/${rid}.json`, { 
+                    data: response.data, 
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers,
+                    config: response.config
+                })
+            }
+
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
@@ -70,7 +83,7 @@ export async function getRequest(domain: string, url: string, headers?: any): Pr
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making get request: ${getErrorMessage(error)}`);
+                console.log(`Error making get request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
@@ -83,7 +96,7 @@ export async function getRequest(domain: string, url: string, headers?: any): Pr
 const rateLimiterMutex = new Mutex();
 let lastCallTime = 0;
 
-export async function throttledGetRequest(domain: string, url: string, headers?: any): Promise<AxiosResponse> {
+export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath=''): Promise<AxiosResponse> {
     await rateLimiterMutex.runExclusive(async () => {
         const currentTime = Date.now();
         const timeSinceLastCall = currentTime - lastCallTime;
@@ -96,12 +109,14 @@ export async function throttledGetRequest(domain: string, url: string, headers?:
         lastCallTime = Date.now();
     });
 
-    return getRequest(domain, url, headers);
+    return getRequest(domain, url, headers, debugPath);
 }
 
-export async function postRequest(domain: string, url: string, data: any, headers?: any): Promise<AxiosResponse> {
+export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath=''): Promise<AxiosResponse> {
+    const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
+        const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.post(url, data, {
                 baseURL: `https://${domain}`,
@@ -116,6 +131,17 @@ export async function postRequest(domain: string, url: string, data: any, header
                     return true; // Always return true to allow handling of all status codes
                 }
             });
+
+            if (config.debug) {
+                writeJsonFile(`./target/debug/post${debugPath}/${rid}.json`, { 
+                    data: response.data, 
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers,
+                    config: response.config
+                })
+            }
+
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
@@ -123,7 +149,7 @@ export async function postRequest(domain: string, url: string, data: any, header
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making post request: ${getErrorMessage(error)}`);
+                console.log(`Error making post request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }

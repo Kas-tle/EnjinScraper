@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { Applications } from '../interfaces/applications';
+import { ApplicationDBResponse, ApplicationForms, Applications } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { enjinRequest, getRequest } from '../util/request';
@@ -63,7 +63,7 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
     const applicationResonse = await getRequest(domain, `/ajax.php?s=dashboard_applications&cmd=app&app_id=${applicationID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/dashboard/applications/application?app_id=${applicationID}`
-    })
+    }, '/applications')
 
     let commentCid = null;
 
@@ -79,6 +79,142 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
 
     console.log(`Found comment cid ${commentCid} for application ${applicationID}`);
     return commentCid;
+}
+
+export async function getApplicationQuestions(domain: string, siteAuth: SiteAuth, database: Database) {
+    const applications: ApplicationDBResponse[] = await new Promise((resolve, reject) => {
+        database.all('SELECT application_id, preset_id, user_data FROM applications', (err, rows: ApplicationDBResponse[]) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+
+    const presetQuestionsMap: Record<string, Set<string>> = {};
+    const appIdsToFetch: Record<string, Record<string, string[]>> = {};
+
+    for (const application of applications) {
+        const { preset_id, application_id, user_data } = application;
+
+        // Parse the user_data as JSON
+        const userDataJson = JSON.parse(user_data);
+
+        if (!presetQuestionsMap[preset_id]) {
+            presetQuestionsMap[preset_id] = new Set<string>();
+            appIdsToFetch[preset_id] = {};
+        }
+
+        const questionHashKeys = Object.keys(userDataJson);
+
+        for (const hashKey of questionHashKeys) {
+            if (!presetQuestionsMap[preset_id].has(hashKey)) {
+                presetQuestionsMap[preset_id].add(hashKey);
+
+                if (!appIdsToFetch[preset_id][application_id]) {
+                    appIdsToFetch[preset_id][application_id] = [];
+                }
+                appIdsToFetch[preset_id][application_id].push(hashKey);
+            }
+        }
+    }
+}
+
+function parseFormQuestionHtml(html: string, questionHash: string): ApplicationForms.Answer | undefined {
+    const $ = cheerio.load(html);
+    const formElement = $(`[hash="${questionHash}"]`);
+
+    if (formElement.length === 0) {
+        return undefined;
+    }
+
+    const formClass = formElement.attr('class');
+
+    if (!formClass) {
+        return undefined;
+    }
+
+    const formType = formClass.split(' ')[1];
+    const questionElement = formElement.find('.form-question-title');
+    const question = questionElement ? questionElement.html() || '' : '';
+    const style = questionElement ? questionElement.attr('style')! : '';
+    const help = formElement.find('.form-question-help').text();
+
+    switch (formType) {
+        case 'form-text-answer':
+            return { type: formType, question, help, style };
+
+        case 'form-dropdown-answer':
+            const options = formElement.find('option').map((_, el) => $(el).text()).get();
+            return { type: formType, question, options, help, style };
+
+        case 'form-checkbox-answer':
+            const checkboxOptions = formElement.find('.chk-label').map((_, el) => $(el).text().trim()).get();
+            return { type: formType, question, options: checkboxOptions, help, style };
+
+        case 'form-numeric-answer':
+            const slider = formElement.find('input[type="range"]').length > 0;
+            return { type: formType, question, slider, help, style };
+
+        case 'form-datetime-answer':
+            const date = formElement.find('.datepicker').attr('id') || '';
+            const time = formElement.find('.hour').attr('id') || '';
+            return { type: formType, question, date, time, help, style };
+
+        case 'form-matrix-answer':
+            const rows = formElement.find('tr');
+            const grid: string[][] = [];
+            rows.each((_, row) => {
+                const rowData: string[] = [];
+                $(row).find('input[type="checkbox"]').each((_, checkbox) => {
+                    rowData.push($(checkbox).attr('value') || '');
+                });
+                grid.push(rowData);
+            });
+            return { type: formType, question, grid, help, style };
+
+        case 'form-bbcode-answer':
+            return { type: formType, style };
+
+        case 'form-image_upload-answer':
+            return { type: formType, question, help, style };
+
+        case 'form-wow-answer':
+            return { type: formType, question, help, style };
+
+        default:
+            return undefined;
+    }
+
+}
+
+function extractSectionHeaders(html: string): ApplicationForms.SectionHeader[] {
+    const $ = cheerio.load(html);
+
+    const sectionHeaderElements = $('.app_inner_output_container > div:not([id])');
+    const sectionHeaders: ApplicationForms.SectionHeader[] = [];
+
+    sectionHeaderElements.each((_index, element) => {
+        const sectionHeaderElement = $(element);
+        const titleElement = sectionHeaderElement.find('.element_title .mask');
+        const title = titleElement.text().trim();
+    
+        const descriptionElement = titleElement.parent().parent().next('div');
+        const descriptionHtml = descriptionElement.html() || '';
+    
+        const prevQuestionHash = sectionHeaderElement.prev('[hash]').attr('hash') || null;
+        const nextQuestionHash = sectionHeaderElement.next('[hash]').attr('hash') || null;
+    
+        sectionHeaders.push({
+          title,
+          description: descriptionHtml,
+          prevQuestionHash,
+          nextQuestionHash,
+        });
+      });
+
+    return sectionHeaders;
 }
 
 export async function getApplications(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {

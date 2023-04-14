@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 import { Database } from 'sqlite3';
 import { News, NewsArticle } from '../interfaces/news';
 import { insertRow } from '../util/database';
-import { enjinRequest, getRequest, throttledGetRequest } from '../util/request';
+import { enjinRequest, throttledGetRequest } from '../util/request';
 import { SiteAuth } from '../interfaces/generic';
 
 interface NewsContent {
@@ -70,7 +70,7 @@ async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAu
 async function getNewsCommentsCid(domain: string, siteAuth: SiteAuth, moduleID: string, articleID: string): Promise<string | null> {
     const newsArticleResonse = await throttledGetRequest(domain, `/home/m/${moduleID}/article/${articleID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-    })
+    }, '/news')
 
     const $ = cheerio.load(newsArticleResonse.data);
     let commentCid = null;
