@@ -249,7 +249,42 @@ These tables are used to store information about the applications that were scra
 
 #### Applications
 
-- `applications`: Contains information about applications
+- `applications`: Contains basic information about applications
+    - `preset_id`: The preset ID of the application (`TEXT PRIMARY KEY`)
+    - `title`: The title of the application (`TEXT`)
+    - `post_app_comments`: Whether or not to allow comments on the application (`BOOLEAN`)
+    - `allow_admin_comments`: Whether or not to allow admin comments on the application (`BOOLEAN`)\
+
+#### Applications Sections
+
+- `application_sections`: Contains sections from applications
+    - `section_id`: The ID of the section (`TEXT PRIMARY KEY`)
+    - `preset_id`: The preset ID of the application the section belongs to (`TEXT REFERENCES applications(preset_id)`)
+    - `title`: The title of the section (`TEXT`)
+    - `new_page`: Whether or not to open the section in a new page (`TEXT`)
+    - `hide_title`: Whether or not to hide the title of the section (`TEXT`)
+    - `delta`: The delta value of the section (`TEXT`)
+    - `description`: The description of the section (`TEXT`)
+    - `conditions`: The conditions for the section (`JSON`)
+    - `visible`: Whether or not the section is visible (`BOOLEAN`)
+    - `header`: The header of the section (`TEXT`)
+
+#### Applications Questions
+
+- `application_questions`: Contains questions from applications
+    - `hash`: The hash of the question (`TEXT PRIMARY KEY`)
+    - `preset_id`: The preset ID of the application the question belongs to (`TEXT REFERENCES applications(preset_id)`)
+    - `delta`: The delta value of the question (`TEXT`)
+    - `data`: The data of the question (`JSON`)
+    - `conditions`: The conditions for the question (`JSON`)
+    - `section_id`: The ID of the section the question belongs to (`TEXT`)
+    - `data_old`: The old data of the question (`JSON`)
+    - `visible`: Whether or not the question is visible (`BOOLEAN`)
+    - `widget`: The widget of the question (`TEXT`)
+
+#### Applications Responses
+
+- `application_responses`: Contains individual responses for applications
     - `application_id`: The ID of the application (`TEXT PRIMARY KEY`)
     - `site_id`: The ID of the site the application belongs to (`TEXT`)
     - `preset_id`: The ID of the application module the application belongs to (`TEXT`)

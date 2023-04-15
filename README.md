@@ -80,7 +80,10 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `news_articles`: Contains information about news articles scraped from the news modules
 - `ticket_modules`: Contains information about ticket modules
 - `tickets`: Contains information about tickets scraped from the ticket modules
-- `applications`: Contains information about applications
+- `applications`: Contains basic information about applications
+- `application_sections`: Contains sections from applications
+- `application_questions`: Contains questions from applications
+- `application_questions`: Contains individual responses for applications
 - `comments`: Contains information about comments on applications and news articles
 - `users`: Contains information about users
 

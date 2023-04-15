@@ -5,7 +5,7 @@ import { authenticateAPI, authenticateSite, getSiteID } from './src/scrapers/aut
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
-import { getApplications } from './src/scrapers/applications';
+import { getApplicationResponses, getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
 
@@ -64,7 +64,8 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'applications')) {
         console.log('Applications already scraped, skipping application scraping...');
     } else {
-        await getApplications(database, config.domain, sessionID, siteAuth, siteID);
+        await getApplicationResponses(database, config.domain, sessionID, siteAuth, siteID);
+        await getApplications(database, config.domain, siteAuth);
         await insertRow(database, 'scrapers', 'applications', true);
         deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
     }

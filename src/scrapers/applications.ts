@@ -1,11 +1,13 @@
 import * as cheerio from 'cheerio';
-import { ApplicationDBResponse, ApplicationForms, Applications } from '../interfaces/applications';
+import * as esprima from 'esprima';
+import escodegen from 'escodegen';
+import { Application, ApplicationContent, ApplicationQuestion, ApplicationQuestionsDB, ApplicationSection, ApplicationSectionsDB, Applications, ApplicationsDB } from '../interfaces/applications';
 import { getErrorMessage } from '../util/error';
 import { addExitListeners, removeExitListeners } from '../util/exit';
-import { enjinRequest, getRequest } from '../util/request';
-import { fileExists, parseJsonFile, writeJsonFile } from '../util/files';
+import { enjinRequest, getRequest, throttledGetRequest } from '../util/request';
+import { fileExists, parseJsonFile, safeEval, writeJsonFile } from '../util/files';
 import { Database } from 'sqlite3';
-import { insertRow } from '../util/database';
+import { insertRow, insertRows } from '../util/database';
 import { SiteAuth } from '../interfaces/generic';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
@@ -81,145 +83,162 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
     return commentCid;
 }
 
-export async function getApplicationQuestions(domain: string, siteAuth: SiteAuth, database: Database) {
-    const applications: ApplicationDBResponse[] = await new Promise((resolve, reject) => {
-        database.all('SELECT application_id, preset_id, user_data FROM applications', (err, rows: ApplicationDBResponse[]) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
+export async function getApplication(domain: string, siteAuth: SiteAuth, presetID: string): Promise<ApplicationContent | null> {
+    const applicationResonse = await throttledGetRequest(domain, `/admin/editmodule/index/editoraction/form-builder/preset/${presetID}`, {
+        Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+        Referer: `Referer https://${domain}/admin/editmodule/index/editoraction/index/preset/${presetID}`
     });
 
-    const presetQuestionsMap: Record<string, Set<string>> = {};
-    const appIdsToFetch: Record<string, Record<string, string[]>> = {};
+    const $ = cheerio.load(applicationResonse.data);
 
-    for (const application of applications) {
-        const { preset_id, application_id, user_data } = application;
+    const scriptNode = $('script[type="text/javascript"]').toArray().find((element) => {
+        return $(element).html()?.includes('var formBuilder');
+    });
 
-        // Parse the user_data as JSON
-        const userDataJson = JSON.parse(user_data);
+    if (scriptNode) {
+        const scriptContent = $(scriptNode).contents().text();
 
-        if (!presetQuestionsMap[preset_id]) {
-            presetQuestionsMap[preset_id] = new Set<string>();
-            appIdsToFetch[preset_id] = {};
-        }
+        const scriptAst = esprima.parseScript(scriptContent);
 
-        const questionHashKeys = Object.keys(userDataJson);
+        let elementsObject;
+        let sectionsObject;
 
-        for (const hashKey of questionHashKeys) {
-            if (!presetQuestionsMap[preset_id].has(hashKey)) {
-                presetQuestionsMap[preset_id].add(hashKey);
-
-                if (!appIdsToFetch[preset_id][application_id]) {
-                    appIdsToFetch[preset_id][application_id] = [];
+        for (const node of scriptAst.body) {
+            if (node.type === 'ExpressionStatement' && node.expression.type === 'CallExpression') {
+                const callExpr = node.expression;
+                if (
+                    callExpr.callee.type === 'MemberExpression' &&
+                    callExpr.callee.object.type === 'CallExpression' &&
+                    callExpr.callee.property.type === 'Identifier' &&
+                    callExpr.callee.property.name === 'ready'
+                ) {
+                    for (const arg of callExpr.arguments) {
+                        if (arg.type === 'FunctionExpression') {
+                            for (const prop of arg.body.body) {
+                                if (
+                                    prop.type === 'ExpressionStatement' &&
+                                    prop.expression.type === 'AssignmentExpression' &&
+                                    prop.expression.left.type === 'Identifier' &&
+                                    prop.expression.left.name === 'formBuilder' &&
+                                    prop.expression.right.type === 'NewExpression'
+                                ) {
+                                    for (const arg of prop.expression.right.arguments) {
+                                        if (arg.type === 'ObjectExpression') {
+                                            for (const prop of arg.properties) {
+                                                if (
+                                                    prop.type === 'Property' &&
+                                                    prop.key.type === 'Identifier' &&
+                                                    prop.value.type === 'ObjectExpression'
+                                                ) {
+                                                    if (prop.key.name === 'elements') {
+                                                        elementsObject = prop.value;
+                                                    } else if (prop.key.name === 'sections') {
+                                                        sectionsObject = prop.value;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                appIdsToFetch[preset_id][application_id].push(hashKey);
             }
         }
+
+        const elements: { [key: string]: ApplicationQuestion } = elementsObject ? safeEval(escodegen.generate(elementsObject)) : {};
+        const sections: { [key: string]: ApplicationSection } = sectionsObject ? safeEval(escodegen.generate(sectionsObject)) : {};
+
+        return { elements, sections };
     }
+    console.log(`No application found for preset ${presetID}`)
+    return null;
 }
 
-function parseFormQuestionHtml(html: string, questionHash: string): ApplicationForms.Answer | undefined {
-    const $ = cheerio.load(html);
-    const formElement = $(`[hash="${questionHash}"]`);
-
-    if (formElement.length === 0) {
-        return undefined;
-    }
-
-    const formClass = formElement.attr('class');
-
-    if (!formClass) {
-        return undefined;
-    }
-
-    const formType = formClass.split(' ')[1];
-    const questionElement = formElement.find('.form-question-title');
-    const question = questionElement ? questionElement.html() || '' : '';
-    const style = questionElement ? questionElement.attr('style')! : '';
-    const help = formElement.find('.form-question-help').text();
-
-    switch (formType) {
-        case 'form-text-answer':
-            return { type: formType, question, help, style };
-
-        case 'form-dropdown-answer':
-            const options = formElement.find('option').map((_, el) => $(el).text()).get();
-            return { type: formType, question, options, help, style };
-
-        case 'form-checkbox-answer':
-            const checkboxOptions = formElement.find('.chk-label').map((_, el) => $(el).text().trim()).get();
-            return { type: formType, question, options: checkboxOptions, help, style };
-
-        case 'form-numeric-answer':
-            const slider = formElement.find('input[type="range"]').length > 0;
-            return { type: formType, question, slider, help, style };
-
-        case 'form-datetime-answer':
-            const date = formElement.find('.datepicker').attr('id') || '';
-            const time = formElement.find('.hour').attr('id') || '';
-            return { type: formType, question, date, time, help, style };
-
-        case 'form-matrix-answer':
-            const rows = formElement.find('tr');
-            const grid: string[][] = [];
-            rows.each((_, row) => {
-                const rowData: string[] = [];
-                $(row).find('input[type="checkbox"]').each((_, checkbox) => {
-                    rowData.push($(checkbox).attr('value') || '');
-                });
-                grid.push(rowData);
+export async function getApplications(database: Database, domain: string, siteAuth: SiteAuth) {
+    const applications: Application[] = await new Promise((resolve, reject) => {
+        database.all('SELECT preset_id, title, post_app_comments, allow_admin_comments FROM application_responses GROUP BY preset_id',
+            (err, rows: Application[]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
             });
-            return { type: formType, question, grid, help, style };
+    });
+    console.log(`Found ${applications.length} application types in application responses table`)
 
-        case 'form-bbcode-answer':
-            return { type: formType, style };
-
-        case 'form-image_upload-answer':
-            return { type: formType, question, help, style };
-
-        case 'form-wow-answer':
-            return { type: formType, question, help, style };
-
-        default:
-            return undefined;
+    const applicationDB: ApplicationsDB[] = [];
+    for (const application of applications) {
+        applicationDB.push(
+            [
+                application.preset_id,
+                application.title,
+                application.post_app_comments,
+                application.allow_admin_comments
+            ]
+        )
     }
+    await insertRows(database, 'applications', applicationDB);
 
+    for (let i = 0; i < applications.length; i++) {
+        const presetID = applications[i].preset_id;
+        console.log(`Gettting questions and sections for application ${presetID} (${i+1}/${applications.length}))`);
+
+        const applicationConent = await getApplication(domain, siteAuth, presetID);
+
+        if (!applicationConent) {
+            console.log(`Failed to get application ${presetID}`);
+            continue;
+        }
+
+        const sectionDB: ApplicationSectionsDB[] = [];
+        for (const section of Object.values(applicationConent.sections)) {
+            sectionDB.push(
+                [
+                    section.section_id,
+                    section.preset_id,
+                    section.title,
+                    section.new_page,
+                    section.hide_title,
+                    section.delta,
+                    section.description,
+                    JSON.stringify(section.conditions),
+                    section.visible,
+                    section.header
+                ]
+            )
+        }
+        if (sectionDB.length !== 0) {
+            await insertRows(database, 'application_sections', sectionDB);
+        }
+
+        const questionDB: ApplicationQuestionsDB[] = [];
+        for (const question of Object.values(applicationConent.elements)) {
+            questionDB.push(
+                [
+                    question.hash,
+                    question.preset_id,
+                    question.delta,
+                    JSON.stringify(question.data),
+                    JSON.stringify(question.conditions),
+                    question.section_id,
+                    question.data_old ? JSON.stringify(question.data_old) : null,
+                    question.visible,
+                    question.widget
+                ]
+            )
+        }
+        if (questionDB.length !== 0) {
+            await insertRows(database, 'application_questions', questionDB);
+        }
+    }
 }
 
-function extractSectionHeaders(html: string): ApplicationForms.SectionHeader[] {
-    const $ = cheerio.load(html);
-
-    const sectionHeaderElements = $('.app_inner_output_container > div:not([id])');
-    const sectionHeaders: ApplicationForms.SectionHeader[] = [];
-
-    sectionHeaderElements.each((_index, element) => {
-        const sectionHeaderElement = $(element);
-        const titleElement = sectionHeaderElement.find('.element_title .mask');
-        const title = titleElement.text().trim();
-    
-        const descriptionElement = titleElement.parent().parent().next('div');
-        const descriptionHtml = descriptionElement.html() || '';
-    
-        const prevQuestionHash = sectionHeaderElement.prev('[hash]').attr('hash') || null;
-        const nextQuestionHash = sectionHeaderElement.next('[hash]').attr('hash') || null;
-    
-        sectionHeaders.push({
-          title,
-          description: descriptionHtml,
-          prevQuestionHash,
-          nextQuestionHash,
-        });
-      });
-
-    return sectionHeaders;
-}
-
-export async function getApplications(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {
+export async function getApplicationResponses(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {
     console.log('Getting applications...');
-    await insertRow(database, 'scrapers', 'applications', false);
+    await insertRow(database, 'scrapers', 'application_responses', false);
 
     const applicationTypes = await getApplicationTypes(domain);
     console.log(`Application types: ${applicationTypes.join(', ')}`);
@@ -306,7 +325,7 @@ export async function getApplications(database: Database, domain: string, sessio
 
             await insertRow(
                 database,
-                'applications',
+                'application_responses',
                 ...values
             ).then(() => {
                 const index = remainingApplicationIDs.indexOf(id);

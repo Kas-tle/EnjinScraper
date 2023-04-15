@@ -71,3 +71,8 @@ export function deleteFiles(filePaths: string[]): void {
         }
     });
 }
+
+export function safeEval(code: string): any {
+    const evalFn = eval;
+    return evalFn(`(${code})`);
+  }

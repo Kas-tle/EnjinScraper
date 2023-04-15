@@ -3,10 +3,10 @@ export namespace Applications {
         [key: string]: string;
     }
     export interface GetList {
-        items: Application[];
+        items: ApplicationResponse[];
         total: string;
     }
-    export interface GetApplication extends Application {
+    export interface GetApplication extends ApplicationResponse {
         user_data: UserData;
         is_archived: boolean;
         is_trashed: boolean;
@@ -20,7 +20,7 @@ interface UserData {
     [key: string]: string | number | boolean | string[] | number[] | boolean[]
 }
 
-export interface Application {
+export interface ApplicationResponse {
     application_id: string;
     site_id: string;
     preset_id: string;
@@ -53,90 +53,145 @@ export interface ApplicationDBResponse {
     user_data: string;
 }
 
-export namespace ApplicationForms {
+export interface Application {
+    preset_id: string, 
+    title: string, 
+    post_app_comments: boolean, 
+    allow_admin_comments: boolean
+}
 
-    export interface TextAnswer {
-        type: 'form-text-answer';
-        question: string;
-        help: string | null;
-        style: string;
+type ApplicationsTupple = [
+    string, string, boolean, boolean
+]
+export interface ApplicationsDB extends Array<ApplicationsTupple[number]> {}
+
+type ApplicationSectionsTupple = [
+    string, string, string, string, string, string, string, string, boolean, string
+]
+export interface ApplicationSectionsDB extends Array<ApplicationSectionsTupple[number]> {}
+
+type ApplicationQuestionsTupple = [
+    string, string, string, string, string, string, string|null, boolean, string
+]
+export interface ApplicationQuestionsDB extends Array<ApplicationQuestionsTupple[number]> {}
+
+export interface ApplicationContent {
+    elements: {
+        [key: string]: ApplicationQuestion;
+    }
+    sections: {
+        [key: string]: ApplicationSection;
+    }
+}
+
+export interface ApplicationQuestion {
+    preset_id: string;
+    hash: string;
+    delta: string;
+    data: QuestionData.Question;
+    conditions:  ApplicationConditions | false;
+    section_id: string;
+    data_old: string | null;
+    visible: boolean;
+    widget: string;
+}
+
+export interface ApplicationSection {
+    section_id: string;
+    preset_id: string;
+    title: string;
+    new_page: string;
+    hide_title: string;
+    delta: string;
+    description: string;
+    conditions: ApplicationConditions | false;
+    visible: boolean;
+    header: string;
+}
+
+interface ApplicationConditions {
+    action: string;
+    on: string;
+    items: {
+        method: string;
+        hash: string;
+        choice: string;
+    }[];
+}
+
+namespace QuestionData {
+    export interface Question {
+        questionType: string;
+        type: string;
+        required: number;
+        bold_question: number;
+        eid: number;
+        help: string;
+        text: string;
     }
 
-    export interface DropdownAnswer {
-        type: 'form-dropdown-answer';
-        question: string;
-        options: string[];
-        help: string | null;
-        style: string;
+    interface Text extends Question {
+        questionType: "shorttext" | "longtext" | "richtext";
+        type: "text";
+        text: string;
+        line_height: string;
+        enable_bbcode: number;
     }
 
-    export interface CheckboxAnswer {
-        type: 'form-checkbox-answer';
-        question: string;
-        options: string[];
-        help: string | null;
-        style: string;
+    interface Dropdown extends Question {
+        questionType: "dropdown";
+        type: "dropdown";
+        choices: string[];
+        line_count: string;
     }
 
-    export interface NumericAnswer {
-        type: 'form-numeric-answer';
-        question: string;
-        slider: boolean;
-        help: string | null;
-        style: string;
+    interface Checkbox extends Question {
+        questionType: "checkbox";
+        type: "checkbox";
+        multiple: number;
+        choices: string[];
     }
 
-    export interface DatetimeAnswer {
-        type: 'form-datetime-answer';
-        question: string;
-        date: string;
-        time: string;
-        help: string | null;
-        style: string;
+    interface Numeric extends Question {
+        questionType: "numeric";
+        type: "numeric";
+        slider: number;
+        decimal: number;
+        min_value: string;
+        max_value: string;
     }
 
-    export interface MatrixAnswer {
-        type: 'form-matrix-answer';
-        question: string;
-        grid: string[][];
-        help: string | null;
-        style: string;
+    interface DateTime extends Question {
+        questionType: "datetime";
+        type: "datetime";
+        enable_date: number;
+        enable_time: number;
+        military_format: number;
     }
 
-    export interface BBCodeAnswer {
-        type: 'form-bbcode-answer';
-        style: string;
+    interface Matrix extends Question {
+        questionType: "matrix";
+        type: "matrix";
+        rows: string[];
+        columns: string[];
+        multiple: number;
     }
 
-    export interface ImageUploadAnswer {
-        type: 'form-image_upload-answer';
-        question: string;
-        help: string | null;
-        style: string;
+    interface BBCode extends Question {
+        questionType: "bbcode";
+        type: "bbcode";
+        hide_title: boolean;
     }
 
-    export interface WowAnswer {
-        type: 'form-wow-answer';
-        question: string;
-        help: string | null;
-        style: string;
+    interface ImageUpload extends Question {
+        questionType: "image_upload";
+        type: "image_upload";
+        limit_upload: string;
     }
 
-    export type Answer =
-        | TextAnswer
-        | DropdownAnswer
-        | CheckboxAnswer
-        | NumericAnswer
-        | DatetimeAnswer
-        | MatrixAnswer
-        | BBCodeAnswer
-        | ImageUploadAnswer
-        | WowAnswer;
-
-    export interface SectionHeader {
-        title: string;
-        description: string;
-        prevQuestionHash: string | null;
-        nextQuestionHash: string | null;
+    interface Wow extends Question {
+        questionType: "wow";
+        type: "wow";
+        multiple: number;
     }
 }

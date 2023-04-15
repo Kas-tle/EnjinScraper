@@ -255,7 +255,7 @@ export const tableSchemas: TableSchema[] = [
 
     // Applications
     {
-        name: 'applications',
+        name: 'application_responses',
         schema: [
             'application_id TEXT PRIMARY KEY',
             'site_id TEXT',
@@ -289,6 +289,44 @@ export const tableSchemas: TableSchema[] = [
             'allow_admin_comments BOOLEAN',
             'comment_cid TEXT',
         ],
+    },
+    {
+        name: 'applications',
+        schema: [
+            'preset_id TEXT PRIMARY KEY',
+            'title TEXT',
+            'post_app_comments BOOLEAN',
+            'allow_admin_comments BOOLEAN',
+        ]
+    },
+    {
+        name: 'application_sections',
+        schema: [
+            'section_id TEXT PRIMARY KEY',
+            'preset_id TEXT REFERENCES applications(preset_id)',
+            'title TEXT',
+            'new_page TEXT',
+            'hide_title TEXT',
+            'delta TEXT',
+            'description TEXT',
+            'conditions JSON',
+            'visible BOOLEAN',
+            'header TEXT',
+        ]
+    },
+    {
+        name: 'application_questions',
+        schema: [
+            'hash TEXT PRIMARY KEY',
+            'preset_id TEXT REFERENCES applications(preset_id)',
+            'delta TEXT',
+            'data JSON',
+            'conditions JSON',
+            'section_id TEXT',
+            'data_old JSON',
+            'visible BOOLEAN',
+            'widget TEXT',
+        ]
     },
 
     // Users

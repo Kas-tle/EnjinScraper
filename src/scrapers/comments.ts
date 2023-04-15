@@ -10,7 +10,7 @@ export async function getComments(database: Database, domain: string, siteAuth: 
     let commentCids: string[] = [];
     
     commentCids.push(...await getTableCommentCids(database, 'news_articles'));
-    commentCids.push(...await getTableCommentCids(database, 'applications'));
+    commentCids.push(...await getTableCommentCids(database, 'application_responses'));
 
     console.log(`Found ${commentCids.length} comments to scrape.`);
 
