@@ -19,6 +19,7 @@ interface Config {
         comments?: boolean;
         users?: boolean;
         usertags?: boolean;
+        files?: boolean;
     };
     debug?: boolean;
 }
@@ -51,7 +52,8 @@ const defaultConfig: Config = {
         tickets: false,
         applications: false,
         comments: false,
-        users: false
+        users: false,
+        files: false,
     },
     debug: false
 };

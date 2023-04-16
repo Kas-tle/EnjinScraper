@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse, ResponseType } from "axios";
 import { Mutex } from 'async-mutex';
 import { getConfig } from './config';
 import { getErrorMessage } from "./error";
@@ -50,8 +50,10 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
 }
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
+const rateLimiterMutex = new Mutex();
+let lastCallTime = 0;
 
-export async function getRequest(domain: string, url: string, headers: any, debugPath=''): Promise<AxiosResponse> {
+export async function getRequest(domain: string, url: string, headers: any, debugPath='', overrideDebug=false, responseType:ResponseType|undefined=undefined): Promise<AxiosResponse> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
@@ -64,9 +66,10 @@ export async function getRequest(domain: string, url: string, headers: any, debu
                     'Accept-Encoding': 'html',
                     ...headers,
                 },
+                responseType: responseType,
             });
 
-            if (config.debug) {
+            if (config.debug && !overrideDebug) {
                 writeJsonFile(`./target/debug/get${debugPath}/${rid}.json`, { 
                     data: response.data, 
                     status: response.status,
@@ -93,10 +96,7 @@ export async function getRequest(domain: string, url: string, headers: any, debu
     return Promise.reject();
 }
 
-const rateLimiterMutex = new Mutex();
-let lastCallTime = 0;
-
-export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath=''): Promise<AxiosResponse> {
+export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath='', overrideDebug=false, responseType=undefined): Promise<AxiosResponse> {
     await rateLimiterMutex.runExclusive(async () => {
         const currentTime = Date.now();
         const timeSinceLastCall = currentTime - lastCallTime;
@@ -109,7 +109,7 @@ export async function throttledGetRequest(domain: string, url: string, headers: 
         lastCallTime = Date.now();
     });
 
-    return getRequest(domain, url, headers, debugPath);
+    return getRequest(domain, url, headers, debugPath, overrideDebug, responseType);
 }
 
 export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath=''): Promise<AxiosResponse> {
@@ -157,4 +157,20 @@ export async function postRequest(domain: string, url: string, data: any, header
     console.log(`Cloudflare rate limit exceeded. Please try again later. Exiting...`)
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
+}
+
+export async function throttledPostRequest(domain: string, url: string, data: any, headers: any, debugPath=''): Promise<AxiosResponse> {
+    await rateLimiterMutex.runExclusive(async () => {
+        const currentTime = Date.now();
+        const timeSinceLastCall = currentTime - lastCallTime;
+        const timeToWait = Math.max(0, 25 - timeSinceLastCall);
+
+        if (timeToWait > 0) {
+            await new Promise((resolve) => setTimeout(resolve, timeToWait));
+        }
+
+        lastCallTime = Date.now();
+    });
+
+    return postRequest(domain, url, data, headers, debugPath);
 }

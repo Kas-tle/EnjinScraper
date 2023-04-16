@@ -9,6 +9,7 @@ import { getApplicationResponses, getApplications } from './src/scrapers/applica
 import { getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
 import { getSiteData } from './src/scrapers/sitedata';
+import { getFiles } from './src/scrapers/files';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -113,6 +114,16 @@ async function main(): Promise<void> {
     } else {
         await getUsers(database, config.domain, config.apiKey, config.disabledModules?.usertags);
         await insertRow(database, 'scrapers', 'users', true);
+    }
+
+    // Get files
+    if (config.disabledModules?.files) {
+        console.log('Files module disabled, skipping file scraping.');
+    } else if (await isModuleScraped(database, 'files')) {
+        console.log('Files already scraped, skipping file scraping...');
+    } else {
+        await getFiles(config.domain, siteAuth, siteID)
+        await insertRow(database, 'scrapers', 'files', true);
     }
 
     process.kill(process.pid, 'SIGINT');
