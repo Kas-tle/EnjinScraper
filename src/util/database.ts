@@ -1,4 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
+import path from 'path';
 import { Database } from 'sqlite3';
 import { TableSchema } from '../interfaces/tableschema';
 import { tableSchemas } from './tables';
@@ -8,7 +9,7 @@ let database: any = null;
 export async function databaseConnection(): Promise<Database> {
     return new Promise((resolve, reject) => {
         if (!database) {
-            const databasePath = 'site.sqlite';
+            const databasePath = path.join(process.cwd(),'./target/site.sqlite');
             database = new sqlite3.Database(databasePath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err: { message: any; }) => {
                 if (err) {
                     console.error(err.message);
