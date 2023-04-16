@@ -181,7 +181,7 @@ async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: 
     return uploads;
 }
 
-export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string, siteAuth: SiteAuth) {
+export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string, siteAuth: SiteAuth, excludedModules: string[] | null) {
     console.log('Getting all tickets...');
     let modules: string[];
     if (fileExists('./target/recovery/module_tickets.json')) {
@@ -189,6 +189,7 @@ export async function getAllTickets(database: Database, domain: string, apiKey: 
     } else {
         modules = await getTicketModules(database, domain, apiKey);
     }
+    excludedModules ? modules = modules.filter(module => !excludedModules.includes(module)) : {};
     console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
     await getTicketsByModule(database, domain, sessionID, siteAuth, modules);
 }

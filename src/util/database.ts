@@ -61,6 +61,21 @@ export async function queryTable(database: Database, table: String): Promise<voi
     });
 }
 
+export async function queryModuleIDs(database: Database, moduleType: string): Promise<string[]> {
+    const moduleIDs: string[] = await new Promise((resolve, reject) => {
+        database.all('SELECT preset_id FROM presets WHERE module_type = ?', [moduleType],
+            (err, rows: [{preset_id: string}]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const moduleIDs = rows.map(row => row.preset_id);
+                    resolve(moduleIDs);
+                }
+            });
+    });
+    return moduleIDs;
+}
+
 
 export async function insertRow(database: Database, table: string, ...params: (string | number | boolean | null)[]): Promise<void> {
     return new Promise((resolve, reject) => {

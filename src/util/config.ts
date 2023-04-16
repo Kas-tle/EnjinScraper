@@ -8,8 +8,9 @@ interface Config {
     password: string;
     sessionID?: string;
     siteAuth: SiteAuth;
-    forumModuleIDs?: string[];
-    newsModuleIDs?: string[];
+    excludeForumModuleIDs?: string[];
+    excludeNewsModuleIDs?: string[];
+    excludeTicketModuleIDs?: string[];
     disabledModules?: {
         forums?: boolean;
         news?: boolean;
@@ -32,11 +33,15 @@ const defaultConfig: Config = {
         phpSessID: "somePHPSESSID",
         csrfToken: "someCSRFToken"
     },
-    forumModuleIDs: [
+    excludeForumModuleIDs: [
         "1000001",
         "1000002"
     ],
-    newsModuleIDs: [
+    excludeNewsModuleIDs: [
+        "1000001",
+        "1000002"
+    ],
+    excludeTicketModuleIDs: [
         "1000001",
         "1000002"
     ],

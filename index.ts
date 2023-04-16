@@ -1,6 +1,6 @@
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory } from './src/util/files';
-import { databaseConnection, initializeTables, insertRow, isModuleScraped } from './src/util/database';
+import { databaseConnection, initializeTables, insertRow, isModuleScraped, queryModuleIDs } from './src/util/database';
 import { authenticateAPI, authenticateSite, getSiteID } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
@@ -8,6 +8,7 @@ import { getAllTickets } from './src/scrapers/tickets';
 import { getApplicationResponses, getApplications } from './src/scrapers/applications';
 import { getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
+import { getSiteData } from './src/scrapers/sitedata';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -33,28 +34,40 @@ async function main(): Promise<void> {
     const database = await databaseConnection();
     await initializeTables(database);
 
+    // Get site data
+    if(await isModuleScraped(database, 'site_data')) {
+        console.log('Site data already scraped, moving on...');
+    } else {
+        await getSiteData(config.domain, siteAuth, database, siteID);
+        await insertRow(database, 'scrapers', 'site_data', true);
+    }
+
     // Get forums
-    if (!config.forumModuleIDs || config.forumModuleIDs.length === 0) {
-        console.log('No forum module IDs provided, skipping forum scraping...');
+    let forumModuleIDs = await queryModuleIDs(database, 'forum');
+    config.excludeForumModuleIDs ? forumModuleIDs.filter(id => !config.excludeForumModuleIDs?.includes(id)) : {};
+    if (forumModuleIDs.length === 0) {
+        console.log('No forum module IDs for site, skipping forum scraping...');
     } else if (config.disabledModules?.forums) {
         console.log('Forums module disabled, skipping forum scraping...');
     } else if (await isModuleScraped(database, 'forums')) {
         console.log('Forums already scraped, skipping forum scraping...');
     } else {
-        await getForums(database, config.domain, sessionID, config.forumModuleIDs);
+        await getForums(database, config.domain, sessionID, forumModuleIDs);
         await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
     }
 
     // Get news
-    if (!config.newsModuleIDs || config.newsModuleIDs.length === 0) {
+    let newsModuleIDs = await queryModuleIDs(database, 'news');
+    config.excludeNewsModuleIDs ? newsModuleIDs.filter(id => !config.excludeNewsModuleIDs?.includes(id)) : {};
+    if (newsModuleIDs.length === 0) {
         console.log('No news module IDs provided, skipping news scraping...');
     } else if (config.disabledModules?.news) {
         console.log('News module disabled, skipping news scraping...');
     } else if (await isModuleScraped(database, 'news')) {
         console.log('News already scraped, skipping news scraping...');
     } else {
-        await getNews(database, config.domain, sessionID, siteAuth, config.newsModuleIDs);
+        await getNews(database, config.domain, sessionID, siteAuth, newsModuleIDs);
         await insertRow(database, 'scrapers', 'news', true);
     }
 
@@ -87,7 +100,7 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'tickets')) {
         console.log('Tickets already scraped, skipping ticket scraping...');
     } else {
-        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth);
+        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth, config.excludeTicketModuleIDs ?? null);
         await insertRow(database, 'scrapers', 'tickets', true);
         deleteFiles(['./target/recovery/module_tickets.json']);
     }

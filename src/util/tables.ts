@@ -10,6 +10,97 @@ export const tableSchemas: TableSchema[] = [
         ]
     },
 
+    // Site Data
+    {
+        name: 'module_categories',
+        schema: [
+            'category_id TEXT PRIMARY KEY',
+            'title TEXT',
+            `'order' TEXT`,
+            'platform TEXT',
+            'webpush_title TEXT',
+            'regular_title TEXT'
+        ]
+    },
+    {
+        name: 'modules',
+        schema: [
+            'rid TEXT',
+            'category_id TEXT',
+            'module_id TEXT PRIMARY KEY',
+            'title TEXT',
+            'description TEXT',
+            'image TEXT',
+            `'order' TEXT`,
+            'platform TEXT',
+            'webpush_title TEXT',
+            'listed TEXT',
+            'allow_create TEXT',
+            'module_type TEXT',
+            'help_guide_url TEXT',
+            'notes TEXT',
+            'min_width TEXT',
+            'video_html TEXT',
+            'released TEXT'
+        ]
+    },
+    {
+        name: 'presets',
+        schema: [
+            'preset_id TEXT PRIMARY KEY',
+            'category_id TEXT',
+            'name TEXT',
+            'admin_access TEXT',
+            'admin_access_tags TEXT',
+            'disabled BOOLEAN',
+            'module_id TEXT REFERENCES modules(module_id)',
+            'module_type TEXT'
+        ]
+    },
+    {
+        name: 'pages',
+        schema: [
+            'site_id TEXT',
+            'url TEXT',
+            'page_id TEXT PRIMARY KEY',
+            'pagename TEXT',
+            'section_id TEXT',
+            'section_type TEXT',
+            'section_width TEXT',
+            'section_type2 TEXT',
+            'section_name TEXT',
+            'container_id TEXT',
+            'container_title TEXT',
+            'container_footer TEXT',
+            'container_footer_url TEXT',
+            'container_footer_window TEXT',
+            'container_position TEXT',
+            'container_graphics TEXT',
+            'rows TEXT',
+            'columns TEXT',
+            'acl_access TEXT',
+            'collapsible_container TEXT',
+            'start_collapsed TEXT',
+            'rid TEXT',
+            'preset_id TEXT REFERENCES presets(preset_id)',
+            'row TEXT',
+            'column TEXT',
+            'module_width TEXT',
+            'module_name TEXT',
+            'disabled TEXT',
+            'module_type TEXT',
+        ]
+    },
+    {
+        name: 'site_data',
+        schema: [
+            'site_id TEXT PRIMARY KEY',
+            'sites_games JSON',
+            'plan JSON',
+            'licenses JSON',
+        ]
+    },
+
     // Forums
     {
         name: 'forum_modules',

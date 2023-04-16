@@ -83,7 +83,7 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
     return commentCid;
 }
 
-export async function getApplication(domain: string, siteAuth: SiteAuth, presetID: string): Promise<ApplicationContent | null> {
+async function getApplication(domain: string, siteAuth: SiteAuth, presetID: string): Promise<ApplicationContent | null> {
     const applicationResonse = await throttledGetRequest(domain, `/admin/editmodule/index/editoraction/form-builder/preset/${presetID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/admin/editmodule/index/editoraction/index/preset/${presetID}`
