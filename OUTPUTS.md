@@ -3,6 +3,12 @@
 - [Outputs](#outputs)
   * [Database Tables](#database-tables)
     + [Utility](#utility)
+    + [Site Data](#site-data)
+      - [Module Categories](#module-categories)
+      - [Modules](#modules)
+      - [Presets](#presets)
+      - [Pages](#pages)
+      - [Site Data](#site-data-1)
     + [Forums](#forums)
       - [Forum Modules](#forum-modules)
       - [Forums](#forums-1)
@@ -15,6 +21,9 @@
       - [Tickets](#tickets-1)
     + [Applications](#applications)
       - [Applications](#applications-1)
+      - [Applications Sections](#applications-sections)
+      - [Applications Questions](#applications-questions)
+      - [Applications Responses](#applications-responses)
     + [Comments](#comments)
       - [Comments](#comments-1)
     + [Users](#users)
@@ -31,6 +40,94 @@ Theses tables are used to store information about the scraping process.
 - `scrapers`: Contains information about what steps have been completed to gracefully resume scraping if needed. For a more detailed database schema, see OUTPUTS.md.
     - `module`: The module that was scraped (`TEXT PRIMARY KEY`)
     - `scraped`: Whether or not the module was scraped (`BOOLEAN`)
+
+### Site Data
+
+These tables are used to store information about overall site data and ultimately help us fetch other downstream data via the API.
+
+#### Module Categories
+
+- `module_categories`: Enumerates the different cateogries modules can fall into
+    - `category_id`: The ID of the category (`TEXT PRIMARY KEY`)
+    - `title`: The title of the category (`TEXT`)
+    - `order`: The order of the category (`TEXT`)
+    - `platform`: The platform of the category (`TEXT`)
+    - `webpush_title`: The webpush title of the category (`TEXT`)
+    - `regular_title`: The regular title of the category (`TEXT`)
+
+#### Modules
+
+- `modules`: Contains information about modules
+    - `rid`: The RID of the module (`TEXT`)
+    - `category_id`: The ID of the category the module belongs to (`TEXT`)
+    - `module_id`: The ID of the module (`TEXT PRIMARY KEY`)
+    - `title`: The title of the module (`TEXT`)
+    - `description`: The description of the module (`TEXT`)
+    - `image`: The image of the module (`TEXT`)
+    - `order`: The order of the module (`TEXT`)
+    - `platform`: The platform of the module (`TEXT`)
+    - `webpush_title`: The webpush title of the module (`TEXT`)
+    - `listed`: Whether or not the module is listed (`TEXT`)
+    - `allow_create`: Whether or not the module is allowed to be created (`TEXT`)
+    - `module_type`: The type of the module (`TEXT`)
+    - `help_guide_url`: The URL of the help guide of the module (`TEXT`)
+    - `notes`: The notes of the module (`TEXT`)
+    - `min_width`: The minimum width of the module (`TEXT`)
+    - `video_html`: The video HTML of the module (`TEXT`)
+    - `released`: Whether or not the module has been released (`TEXT`)
+
+#### Presets
+
+- `presets`: Contains information about presets, essentially a list of individual modules
+    - `preset_id`: The ID of the preset (`TEXT PRIMARY KEY`)
+    - `category_id`: The ID of the category the preset belongs to (`TEXT`)
+    - `name`: The name of the preset (`TEXT`)
+    - `admin_access`: The admin access of the preset (`TEXT`)
+    - `admin_access_tags`: The admin access tags of the preset (`TEXT`)
+    - `disabled`: Whether or not the preset is disabled (`BOOLEAN`)
+    - `module_id`: The ID of the module the preset is associated with (`TEXT REFERENCES modules(module_id)`)
+    - `module_type`: The type of the module the preset is associated with (`TEXT`)
+
+#### Pages
+
+- `pages`: Contains information about modules in the context of the page they reside on
+    - `site_id`: The ID of the site associated with the page (`TEXT`)
+    - `url`: The URL of the page (`TEXT`)
+    - `page_id`: The ID of the page (`TEXT PRIMARY KEY`)
+    - `pagename`: The name of the page (`TEXT`)
+    - `section_id`: The ID of the section the page belongs to (`TEXT`)
+    - `section_type`: The type of the section the page belongs to (`TEXT`)
+    - `section_width`: The width of the section the page belongs to (`TEXT`)
+    - `section_type2`: The type of the section the page belongs to (`TEXT`)
+    - `section_name`: The name of the section the page belongs to (`TEXT`)
+    - `container_id`: The ID of the container the page belongs to (`TEXT`)
+    - `container_title`: The title of the container the page belongs to (`TEXT`)
+    - `container_footer`: The footer of the container the page belongs to (`TEXT`)
+    - `container_footer_url`: The URL of the footer of the container the page belongs to (`TEXT`)
+    - `container_footer_window`: The window of the footer of the container the page belongs to (`TEXT`)
+    - `container_position`: The position of the container the page belongs to (`TEXT`)
+    - `container_graphics`: The graphics of the container the page belongs to (`TEXT`)
+    - `rows`: The rows of the page (`TEXT`)
+    - `columns`: The columns of the page (`TEXT`)
+    - `acl_access`: The access of the ACL (`TEXT`)
+    - `collapsible_container`: Whether or not the container of the page is collapsible (`TEXT`)
+    - `start_collapsed`: Whether or not the container of the page is initially collapsed (`TEXT`)
+    - `rid`: The ID of the page's RID (`TEXT`)
+    - `preset_id`: The ID of the preset associated with the page (`TEXT REFERENCES presets(preset_id)`)
+    - `row`: The row of the page (`TEXT`)
+    - `column`: The column of the page (`TEXT`)
+    - `module_width`: The width of the module on the page (`TEXT`)
+    - `module_name`: The name of the module on the page (`TEXT`)
+    - `disabled`: Whether or not the module on the page is disabled (`TEXT`)
+    - `module_type`: The type of the module on the page (`TEXT`)
+
+#### Site Data
+
+- `site_data`: A table that stores various information about a website
+    `site_id`: The ID of the website (`TEXT PRIMARY KEY`).
+    `sites_games`: A JSON object that contains data about the games available on the site (`JSON`)
+    `plan`: A JSON object that contains data about the current plan of the site (`JSON`)
+    `licenses`: A JSON object that contains data about the licenses used by the site (`JSON`)
 
 ### Forums
 

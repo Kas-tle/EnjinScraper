@@ -24,14 +24,6 @@ Per Enjin's instructions:
 
 > To enable your API, visit your admin panel / settings / API area. The content on this page includes your base API URL, your secret API key, and the API mode. Ensure that the API mode is set to "Public".
 
-#### Obtaining Forum Module IDs
-
-This can be obtained in the admin panel of your site under "Modules". Using the left side panel, you can filter to the type "Forum Board". Make a list of the Module IDs you wish to scrape in the `config.json` file as shown below.
-
-#### Obtaining News Module IDs
-
-This can be obtained in the admin panel of your site under "Modules". Using the left side panel, you can filter to the type "News / Blog". Make a list of the Module IDs you wish to scrape in the `config.json` file as shown below.
-
 #### Configuring the `config.json`
 
 Create a `config.json` file in the root directory of the project. The file should look like this:
@@ -42,22 +34,15 @@ Create a `config.json` file in the root directory of the project. The file shoul
     "domain": "www.example.com", // Required
     "email": "someemail@email.com", // Required
     "password": "somepassword", // Required
-    "sessionID": "someSessionID", // Optional, otherwise it will be fetched automatically
-    "forumModuleIDs": [ // Optional, otherwise no forums will be scraped
-        "1000001",
-        "1000002"
-    ],
-    "newsModuleIDs": [ // Optional, otherwise no news will be scraped
-        "1000001",
-        "1000002"
-    ],
     "disabledModules": {
         "forums": false,
         "news": false,
         "tickets": false,
         "applications": false,
+        "comments": false,
         "users": false,
-        "usertags": true
+        "usertags": false,
+        "files": false
     },
     "debug": false
 }
@@ -73,6 +58,11 @@ npx ts-node index.ts
 
 The scraper will output an sqlite file at `target/site.sqlite` in the root directory of the project. For a more detailed database schema, see [OUTPUTS.md](OUTPUTS.md). The database will contain the following tables:
 - `scrapers`: Contains information about what steps have been completed to gracefully resume scraping if needed.
+- `module_categories`: Enumerates the different cateogries modules can fall into
+- `modules`: Contains information about modules
+- `presets`: Contains information about presets, essentially a list of individual modules
+- `pages`: Contains information about modules in the context of the page they reside on
+- `site_data`: A table that stores various information about a website
 - `forum_modules`: Contains information about the forum modules that were scraped
 - `forums`: Contains information about the forums scraped from the forum modules
 - `threads`: Contains information about the threads scraped from the forums

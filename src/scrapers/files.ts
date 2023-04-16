@@ -5,6 +5,7 @@ import { getRequest, postRequest, throttledGetRequest } from "../util/request";
 import fs from 'fs/promises';
 import path from 'path';
 import { fileExists, parseJsonFile } from "../util/files";
+import { getErrorMessage } from "../util/error";
 
 async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: string, path: string): Promise<DirectoryListing> {
     const fileData = new URLSearchParams({
@@ -74,29 +75,34 @@ async function downloadFiles(files: FileData[], targetPath: string) {
     const totalFiles = files.length;
 
     for (let i = fileCount[0]; i < totalFiles; i++) {
-        const file = files[i];
-        const response = await getRequest('', file.url, {}, '', true, 'arraybuffer');
-
-        const filePath = path.join(targetPath, file.dirPath, file.filename);
-        const fileDirectory = path.dirname(filePath);
-        await fs.mkdir(fileDirectory, { recursive: true });
-
-        await fs.writeFile(filePath, response.data, { encoding: null });
-        console.log(`Downloaded ${file.url} with size ${response.data.length} bytes (${++fileCount[0]}/${files.length})`);
+        try {
+            const file = files[i];
+            const response = await getRequest('', file.url, {}, '', true, 'arraybuffer');
+    
+            const filePath = path.join(targetPath, file.dirPath, file.filename);
+            const fileDirectory = path.dirname(filePath);
+            await fs.mkdir(fileDirectory, { recursive: true });
+    
+            await fs.writeFile(filePath, response.data, { encoding: null });
+            console.log(`Downloaded ${file.url} with size ${response.data.length} bytes (${++fileCount[0]}/${totalFiles})`);
+        } catch (error) {
+            console.log (`Error downloading ${files[i].url}: ${getErrorMessage(error)}`);
+            console.log (`Skipping file ${files[i].url} (${++fileCount[0]}/${totalFiles})`);
+        }
     }
 }
 
 export async function getFiles(domain: string, siteAuth: SiteAuth, siteID: string) {
-    const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
-        Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-        Origin: `https://${domain}`,
-        Referer: `https://${domain}/admin/files`,
-    })
-    const token = tokenResponse.data.token;
-
     let allFileUrls: FileData[] = [];
 
     if (!fileExists('./target/recovery/file_progress.json')) {
+        const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
+            Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+            Origin: `https://${domain}`,
+            Referer: `https://${domain}/admin/files`,
+        })
+        const token = tokenResponse.data.token;
+        
         allFileUrls = await getAllFileUrls(domain, siteAuth, token, `/${siteID}`);
     }
 

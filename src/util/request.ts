@@ -38,6 +38,13 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
                 console.log(`Enjin API rate limit exceeded, retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
+            } else if (error.response && error?.response.status === 403) {
+                console.log(`File is not available for download (403 Forbidden)`);
+                return Promise.reject();
+            } else if (error.code === 'EAI_AGAIN') {
+                console.log(`DNS lookup error on request ${qid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
                 console.log(`Error making request ${qid}: ${getErrorMessage(error)}`);
                 throw error;
@@ -71,7 +78,7 @@ export async function getRequest(domain: string, url: string, headers: any, debu
 
             if (config.debug && !overrideDebug) {
                 writeJsonFile(`./target/debug/get${debugPath}/${rid}.json`, { 
-                    data: response.data, 
+                    data: response.data,
                     status: response.status,
                     statusText: response.statusText,
                     headers: response.headers,
@@ -83,6 +90,13 @@ export async function getRequest(domain: string, url: string, headers: any, debu
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
                 console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            } else if (error.response && error?.response.status === 403) {
+                console.log(`File is not available for download (403 Forbidden)`);
+                return Promise.reject();
+            } else if (error.code === 'EAI_AGAIN') {
+                console.log(`DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
@@ -146,6 +160,13 @@ export async function postRequest(domain: string, url: string, data: any, header
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
                 console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            } else if (error.response && error?.response.status === 403) {
+                console.log(`File is not available for download (403 Forbidden)`);
+                return Promise.reject();
+            } else if (error.code === 'EAI_AGAIN') {
+                console.log(`DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
