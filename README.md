@@ -83,6 +83,8 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `comments`: Contains information about comments on applications and news articles
 - `users`: Contains information about users
 
+Any files hosted on Enjin's Amazon S3 instance (which includes attachments for applications, tickets, forum posts, and news posts) will be downloaded to `target/files`. Note that I still need to add support for downloading of certain non-S3 files, such as avatars and (for some odd reason) wiki uploads.
+
 ## TODO
 
 - [ ] Add more options for user data scraping (https://github.com/Kas-tle/EnjinScraper/issues/8)
