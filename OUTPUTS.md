@@ -14,6 +14,12 @@
       - [Forums](#forums-1)
       - [Threads](#threads)
       - [Posts](#posts)
+    + [Wikis](#wikis)
+      - [Wiki Pages](#wiki-pages)
+      - [Wiki Revisions](#wiki-revisions)
+      - [Wiki Likes](#wiki-likes)
+      - [Wiki Categories](#wiki-categories)
+      - [Wiki Uploads](#wiki-uploads)
     + [News](#news)
       - [News Articles](#news-articles)
     + [Tickets](#tickets)
@@ -605,6 +611,12 @@ When `debug` is set to `true` in the config file, each request will be logged in
     - `get`
 - `Tickets`
     - `getModules`
+- `Wiki`
+    - `getPageList`
+    - `getPageTitle`
+    - `getPageHistory`
+    - `getCategories`
+    - `getFiles`
     - `getReplies`
     - `getTickets`
 - `User`
