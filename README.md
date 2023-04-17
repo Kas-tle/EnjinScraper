@@ -49,6 +49,8 @@ Create a `config.json` file in the root directory of the project. The file shoul
 }
 ```
 
+You should use an account with the greatest possible permissions, as that will increase the amount of content that can be scraped. Given that, the practical use of this tool is unfortunately limited to those with backend access to the site to be scraped. There is no neeed to enter module IDs, as the scraper will automatically gather info about all modules on the site.
+
 ### Running
 
 ```bash
