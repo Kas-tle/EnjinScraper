@@ -25,6 +25,9 @@ export interface Params {
     characters? : string;
     mcplayers? : string;
     user_id? : string;
+    title? : string;
+    prop? : string[];
+    oldid? : string;
 }
 
 export interface Pagination {

@@ -37,6 +37,7 @@ Create a `config.json` file in the root directory of the project. The file shoul
     "disabledModules": {
         "forums": false,
         "news": false,
+        "wikis": false,
         "tickets": false,
         "applications": false,
         "comments": false,
@@ -67,6 +68,11 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `forums`: Contains information about the forums scraped from the forum modules
 - `threads`: Contains information about the threads scraped from the forums
 - `posts`: Contains information about the posts scraped from the forums
+- `wiki_pages`: Contains information about pages in a wiki, including their content, access control settings, and metadata
+- `wiki_revisions`: Contains information about revisions to pages in a wiki, including their content, access control settings, and metadata
+- `wiki_likes`: Contains information about users who have liked pages in a wiki
+- `wiki_categories`: Contains information about categories in a wiki, including their titles and thumbnails
+- `wiki_uploads`: Contains information about uploaded files in a wiki
 - `news_articles`: Contains information about news articles scraped from the news modules
 - `ticket_modules`: Contains information about ticket modules
 - `tickets`: Contains information about tickets scraped from the ticket modules
@@ -79,8 +85,5 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 
 ## TODO
 
-- [ ] Add support for scraping wikis (https://github.com/Kas-tle/EnjinScraper/issues/5)
-- [ ] Add support for downloading referenced images and attachments (https://github.com/Kas-tle/EnjinScraper/issues/4)
 - [ ] Add more options for user data scraping (https://github.com/Kas-tle/EnjinScraper/issues/8)
 - [ ] Add support for scraping galleries (https://github.com/Kas-tle/EnjinScraper/issues/6)
-- [ ] Export to database

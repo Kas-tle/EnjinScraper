@@ -7,7 +7,7 @@ import { writeJsonFile } from "./files";
 
 let id = 0;
 
-export async function enjinRequest<T>(params: Params, method: string, domain: string): Promise<EnjinResponse<T>> {
+export async function enjinRequest<T>(params: Params, method: string, domain: string, inputHeaders: any={}): Promise<EnjinResponse<T>> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
@@ -21,7 +21,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
                     method: method,
                     params: params,
                 },
-                { headers: { 'Content-Type': 'application/json' } }
+                { headers: { 'Content-Type': 'application/json', ...inputHeaders, } }
             );
 
             if (config.debug) {

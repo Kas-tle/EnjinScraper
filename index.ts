@@ -10,6 +10,7 @@ import { getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
 import { getSiteData } from './src/scrapers/sitedata';
 import { getFiles } from './src/scrapers/files';
+import { getWikis } from './src/scrapers/wiki';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -56,6 +57,21 @@ async function main(): Promise<void> {
         await getForums(database, config.domain, sessionID, forumModuleIDs);
         await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
+    }
+
+    // Get wikis
+    let wikiModuleIDs = await queryModuleIDs(database, 'wiki');
+    config.excludedWikiModuleIDs ? wikiModuleIDs.filter(id => !config.excludedWikiModuleIDs?.includes(id)) : {};
+    if (wikiModuleIDs.length === 0) {
+        console.log('No wiki module IDs for site, skipping wiki scraping...');
+    } else if (config.disabledModules?.wikis) {
+        console.log('Wikis module disabled, skipping wiki scraping...');
+    } else if (await isModuleScraped(database, 'wikis')) {
+        console.log('Wikis already scraped, skipping wiki scraping...');
+    } else {
+        await getWikis(config.domain, database, wikiModuleIDs);
+        await insertRow(database, 'scrapers', 'wikis', true);
+        deleteFiles(['./target/recovery/wiki_progress.json']);
     }
 
     // Get news
@@ -124,6 +140,7 @@ async function main(): Promise<void> {
     } else {
         await getFiles(config.domain, siteAuth, siteID)
         await insertRow(database, 'scrapers', 'files', true);
+        deleteFiles(['./target/recovery/file_progress.json']);
     }
 
     process.kill(process.pid, 'SIGINT');

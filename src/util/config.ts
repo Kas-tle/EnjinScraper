@@ -11,9 +11,11 @@ interface Config {
     excludeForumModuleIDs?: string[];
     excludeNewsModuleIDs?: string[];
     excludeTicketModuleIDs?: string[];
+    excludedWikiModuleIDs?: string[];
     disabledModules?: {
         forums?: boolean;
         news?: boolean;
+        wikis?: boolean;
         tickets?: boolean;
         applications?: boolean;
         comments?: boolean;
@@ -46,9 +48,14 @@ const defaultConfig: Config = {
         "1000001",
         "1000002"
     ],
+    excludedWikiModuleIDs: [
+        "1000001",
+        "1000002"
+    ],
     disabledModules: {
         forums: false,
         news: false,
+        wikis: false,
         tickets: false,
         applications: false,
         comments: false,

@@ -44,6 +44,14 @@ export namespace Wiki {
         comment_access: boolean;
         avatar: string;
         text_display: string;
+        categories: string[];
+        comments_total: string;
+        comment_cid: string;
+        likes: {
+            total: string;
+            users: UserEntry[];
+            have_liked: boolean;
+        }
     }
     export interface GetPageCommentData {
         page_id: string;
@@ -106,3 +114,40 @@ export interface CategoryEntry {
     cl_to: null | string;
     cl_type: null | string;
 }
+
+export interface UserEntry {
+    user_id: string;
+    username: string;
+    avatar: string;
+}
+
+type WikiPagesTuple = [
+    string, string, string, string, string, string, string, string, string, string,
+    string|null, string|null, string, string, string, string, string, string, string, string,
+    string, string, string, string, number, boolean, boolean, string, string, string,
+    string, string, string, string
+]
+export interface WikiPagesDB extends Array<WikiPagesTuple[number]> {}
+
+type WikiRevisionsTuple = [
+    string, string, string, string, string, string, string, string, string, string,
+    string|null, string|null, string, string, string, string, string, string, string, string,
+    string, string, string, string, string, string, string, string, string, string,
+    string, number, boolean, boolean, string, string, string
+]
+export interface WikiRevisionsDB extends Array<WikiRevisionsTuple[number]> {}
+
+type WikiLikesTuple = [
+    string, string, string, string, string, string, string, string
+]
+export interface WikiLikesDB extends Array<WikiLikesTuple[number]> {}
+
+type WikiCategoriesTuple = [
+    string, string, string, string, string, string, string|null, string|null
+]
+export interface WikiCategoriesDB extends Array<WikiCategoriesTuple[number]> {}
+
+type WikiUploadsTuple = [
+    string, string
+]
+export interface WikiUploadsDB extends Array<WikiUploadsTuple[number]> {}

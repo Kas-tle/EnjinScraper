@@ -278,6 +278,117 @@ These tables are used to store information about the forum modules that were scr
     - `user_posts`: The number of posts of the user who made the post (`TEXT`)
     - `url`: The URL of the post (`TEXT`)
 
+### Wikis
+
+These tables are used to store information about the wikis scraped.
+
+#### Wiki Pages
+
+- `wiki_pages`: Contains information about pages in a wiki, including their content, access control settings, and metadata
+    - `preset_id`: The ID of the wiki module preset (`TEXT`)
+    - `page_id`: The unique ID of the page (`TEXT PRIMARY KEY`)
+    - `page_namespace`: The namespace of the page (`TEXT`)
+    - `page_title`: The title of the page (`TEXT`)
+    - `page_is_redirect`: Whether or not the page is a redirect (`TEXT`)
+    - `page_is_new`: Whether or not the page is new (`TEXT`)
+    - `page_touched`: The timestamp of the last time the page was touched (`TEXT`)
+    - `page_links_updated`: The timestamp of the last time the page's links were updated (`TEXT`)
+    - `page_latest`: The ID of the latest revision of the page (`TEXT`)
+    - `page_len`: The length of the page (`TEXT`)
+    - `page_content_model`: The content model of the page (`TEXT`)
+    - `page_lang`: The language of the page (`TEXT`)
+    - `view_access_acl`: The access control list for viewing the page (`TEXT`)
+    - `edit_access_acl`: The access control list for editing the page (`TEXT`)
+    - `comment_access_acl`: The access control list for commenting on the page (`TEXT`)
+    - `rev_id`: The ID of the page revision (`TEXT`)
+    - `rev_timestamp`: The timestamp of the revision (`TEXT`)
+    - `rev_user`: The ID of the user who made the revision (`TEXT`)
+    - `rev_user_text`: The username of the user who made the revision (`TEXT`)
+    - `rev_comment`: The comment for the revision (`TEXT`)
+    - `rev_parent_id`: The ID of the parent revision (`TEXT`)
+    - `text_text`: The text content of the revision (`TEXT`)
+    - `rd_title`: The title of the page the redirect points to, if applicable (`TEXT`)
+    - `page_title_display`: The displayed title of the page (`TEXT`)
+    - `current_timestamp`: The current timestamp (`INTEGER`)
+    - `view_access`: The access level required to view the page (`TEXT`)
+    - `edit_access`: The access level required to edit the page (`TEXT`)
+    - `comment_access`: The access level required to comment on the page (`TEXT`)
+    - `avatar`: The URL of the user's avatar (`TEXT`)
+    - `text_display`: The displayed text content of the revision (`TEXT`)
+    - `categories`: A JSON object containing the categories for the page (`JSON`)
+    - `comments_total`: The total number of comments on the page (`TEXT`)
+    - `comment_cid`: The ID of the comment (`TEXT`)
+    - `likes_total`: The total number of likes on the page (`TEXT`)
+
+#### Wiki Revisions
+
+- `wiki_revisions`: Contains information about revisions to pages in a wiki, including their content, access control settings, and metadata
+    - `preset_id`: The ID of the wiki module preset (`TEXT`)
+    - `page_id`: The unique ID of the page (`TEXT`)
+    - `page_namespace`: The namespace of the page (`TEXT`)
+    - `page_title`: The title of the page (`TEXT`)
+    - `page_is_redirect`: Whether or not the page is a redirect (`TEXT`)
+    - `page_is_new`: Whether or not the page is new (`TEXT`)
+    - `page_is_touched`: Whether or not the page has been touched (`TEXT`)
+    - `page_links_updated`: The timestamp of the last time the page's links were updated (`TEXT`)
+    - `page_latest`: The ID of the latest revision of the page (`TEXT`)
+    - `page_len`: The length of the page (`TEXT`)
+    - `page_content_model`: The content model of the page (`TEXT`)
+    - `page_lang`: The language of the page (`TEXT`)
+    - `view_access_acl`: The access control list for viewing the page (`TEXT`)
+    - `edit_access_acl`: The access control list for editing the page (`TEXT`)
+    - `comment_access_acl`: The access control list for commenting on the page (`TEXT`)
+    - `rev_id`: The unique ID of the revision (`TEXT PRIMARY KEY`)
+    - `rev_timestamp`: The timestamp of the revision (`TEXT`)
+    - `rev_user`: The ID of the user who made the revision (`TEXT`)
+    - `rev_user_text`: The username of the user who made the revision (`TEXT`)
+    - `rev_comment`: The comment for the revision (`TEXT`)
+    - `rev_parent_id`: The ID of the parent revision (`TEXT`)
+    - `rev_minor_edit`: Whether or not the revision is a minor edit (`TEXT`)
+    - `rev_deleted`: Whether or not the revision is deleted (`TEXT`)
+    - `rev_len`: The length of the revision (`TEXT`)
+    - `rev_sha1`: The SHA-1 hash of the revision (`TEXT`)
+    - `rev_content_format`: The content format of the revision (`TEXT`)
+    - `rev_content_model`: The content model of the revision (`TEXT`)
+    - `avatar`: The URL of the user's avatar (`TEXT`)
+    - `text_text`: The text content of the revision (`TEXT`)
+    - `rd_title`: The title of the page the redirect points to, if applicable (`TEXT`)
+    - `page_title_display`: The displayed title of the page (`TEXT`)
+    - `current_timestamp`: The current timestamp (`TEXT`)
+    - `view_access`: The access level required to view the page (`TEXT`)
+    - `edit_access`: The access level required to edit the page (`TEXT`)
+    - `comment_access`: The access level required to comment on the page (`TEXT`)
+    - `text_display`: The displayed text content of the revision (`TEXT`)
+    - `categories`: A JSON object containing the categories for the page (`JSON`)
+
+#### Wiki Likes
+
+- `wiki_likes`: Contains information about users who have liked pages in a wiki
+    - `preset_id`: The ID of the wiki module preset (`TEXT`)
+    - `page_id`: The unique ID of the page (`TEXT`)
+    - `user_id`: The ID of the user who liked the page (`TEXT`)
+    - `username`: The username of the user who liked the page (`TEXT`)
+    - `avatar`: The URL of the user's avatar (`TEXT`)
+
+#### Wiki Categories
+
+- `wiki_categories`: Contains information about categories in a wiki, including their titles and thumbnails
+    - `preset_id`: The ID of the wiki module preset (`TEXT`)
+    - `page_title`: The title of the page associated with the category (`TEXT`)
+    - `page_title_dbkey`: The database key of the page associated with the category (`TEXT`)
+    - `page_title_display`: The displayed title of the page associated with the category (`TEXT`)
+    - `category_thumbnail`: The URL of the thumbnail for the category (`TEXT`)
+    - `category_thumbnail_path`: The path to the thumbnail for the category (`TEXT`)
+    - `cl_to`: The name of the category (`TEXT`)
+    - `cl_type`: The type of the category (`TEXT`)
+
+#### Wiki Uploads
+
+- `wiki_uploads`: Contains information about uploaded files in a wiki
+    - `preset_id`: The ID of the wiki module preset (`TEXT`)
+    - `path`: The path to the uploaded file (`TEXT`)
+    - `name`: The name of the uploaded file (`TEXT`)
+
 ### News
 
 These tables are used to store information about the news modules that were scraped.
