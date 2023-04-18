@@ -10,6 +10,22 @@ Note that this is still a work in progress and as such installation and usage re
 
 ### Installation
 
+#### NodeJS, Yarn, and Git
+
+For Linux and MacOS users, you're best off using your system's respective package manager to install NodeJS and Git, then NPM to install yarn.
+
+For Windows, open a Powershell prompt and do the following:
+
+```ps1
+winget install -e --id OpenJS.NodeJS
+winget install -e --id Git.Git
+npm install --global yarn
+```
+
+#### Scraper
+
+You should now be able to do the following in your system's respective terminal. For Windows, this is Powershell:
+
 ```bash
 git clone https://github.com/Kas-tle/EnjinScraper.git
 cd EnjinScraper
@@ -26,7 +42,7 @@ Per Enjin's instructions:
 
 #### Configuring the `config.json`
 
-Create a `config.json` file in the root directory of the project. The file should look like this:
+Create a `config.json` file in the root directory of the project. The file should look like this, but with comments omitted:
 
 ```jsonc
 {
