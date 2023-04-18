@@ -559,6 +559,60 @@ export const tableSchemas: TableSchema[] = [
         ],
     },
 
+    // Galleries
+    {
+        name: 'gallery_albums',
+        schema: [
+            'album_id TEXT PRIMARY KEY',
+            'preset_id TEXT',
+            'type TEXT',
+            'game_id TEXT',
+            'title TEXT',
+            'description TEXT',
+            'image_id TEXT',
+            'total_images TEXT',
+            'ordering TEXT',
+        ],
+    },
+    {
+        name: 'gallery_images',
+        schema: [
+            'image_id TEXT PRIMARY KEY',
+            'preset_id TEXT',
+            'title TEXT',
+            'description TEXT',
+            'created TEXT',
+            'user_id TEXT',
+            'views TEXT',
+            'album_id TEXT',
+            'have_original TEXT',
+            'ordering TEXT',
+            'number_comments TEXT',
+            'comment_cid TEXT',
+            'url TEXT',
+            'url_full TEXT',
+            'url_original TEXT',
+            'can_modify BOOLEAN',
+        ],
+    },
+    {
+        name: 'gallery_tags',
+        schema: [
+            'gallery_tagid TEXT PRIMARY KEY',
+            'album_id TEXT',
+            'preset_id TEXT',
+            'image_id TEXT',
+            'user_id TEXT',
+            'note TEXT',
+            'ordering TEXT',
+            'px TEXT',
+            'py TEXT',
+            'width TEXT',
+            'height TEXT',
+            'taglist JSON',
+        ],
+    },
+
     // Files
     {
         name: 's3_files',
