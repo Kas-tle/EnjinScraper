@@ -554,7 +554,8 @@ export const tableSchemas: TableSchema[] = [
             'points_spent TEXT',
             'points_decayed TEXT',
             'tags JSON',
-            'points_adjusted TEXT'
+            'points_adjusted TEXT',
+            'ip_history JSON',
         ],
     },
 

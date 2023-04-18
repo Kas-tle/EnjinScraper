@@ -1,7 +1,7 @@
 import { Directory, DirectoryListing, FileData, S3FilesDB } from "../interfaces/files";
 import { SiteAuth } from "../interfaces/generic";
 import { addExitListeners, removeExitListeners } from "../util/exit";
-import { getRequest, postRequest, throttledGetRequest } from "../util/request";
+import { getRequest, postRequest } from "../util/request";
 import fs from 'fs/promises';
 import path from 'path';
 import { fileExists, parseJsonFile } from "../util/files";

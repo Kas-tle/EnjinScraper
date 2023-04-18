@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'users')) {
         console.log('Users already scraped, skipping user tag scraping...');
     } else {
-        await getUsers(database, config.domain, config.apiKey, config.disabledModules?.usertags);
+        await getUsers(database, config.domain, siteAuth, config.apiKey, config.disabledModules?.usertags, config.disabledModules?.userips);
         await insertRow(database, 'scrapers', 'users', true);
     }
 

@@ -21,6 +21,7 @@ interface Config {
         comments?: boolean;
         users?: boolean;
         usertags?: boolean;
+        userips?: boolean;
         files?: boolean;
     };
     debug?: boolean;
@@ -60,6 +61,8 @@ const defaultConfig: Config = {
         applications: false,
         comments: false,
         users: false,
+        usertags: false,
+        userips: false,
         files: false,
     },
     debug: false

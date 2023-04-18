@@ -34,7 +34,9 @@
       - [Comments](#comments-1)
     + [Users](#users)
       - [Users](#users-1)
-  * [Images](#images)
+    + [Files](#files)
+      - [S3 Files](#s3-files)
+  * [Files](#files-1)
   * [Debug](#debug)
 
 ## Database Tables
@@ -586,10 +588,24 @@ These tables are used to store information about the users that were scraped.
     - `points_decayed`: The number of points the user has lost due to decay (`TEXT`)
     - `tags`: The tags for the user (`JSON`)
     - `points_adjusted`: The adjusted number of points the user has (`TEXT`)
+    - `user_ips`: The IPs of the user and any other user(s) with the same IPs (`JSON`)
 
-## Images
+### Files
 
-In progress.
+These tables are used to store information about the files that were scraped.
+
+#### S3 Files
+
+- `s3_files`: Contains information about files stored in Enjin's Amazon S3 storage
+    - `filename`: The name of the file (`TEXT`)
+    - `url`: The URL of the file (`TEXT`)
+    - `dirPath`: The directory path of the file (`TEXT`)
+
+## Files
+
+Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance. The files will be stored in the `target/files` directory in the same directory as the `config.json` file. All information about these files will be stored in the `s3_files` table in the database.
+
+Files from wiki pages will be stored in the `wiki` directory. These do not have a directory structure, so they are simply in the parent folder of the wiki module's preset ID. For example, if the wiki module's preset ID is `123456`, the files will be stored in the `target/files/wiki/123456` directory.
 
 ## Debug
 
