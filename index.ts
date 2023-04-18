@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory } from './src/util/files';
 import { databaseConnection, initializeTables, insertRow, isModuleScraped, queryModuleIDs } from './src/util/database';

@@ -2,10 +2,16 @@
   "name": "enjin-scraper",
   "version": "1.0.0",
   "description": "Scrapes an Enjin site via the Enjin API",
-  "main": "index.js",
   "repository": "https://github.com/Kas-tle/EnjinScraper.git",
   "author": "Joshua Castle <26531652+Kas-tle@users.noreply.github.com>",
-  "license": "AGPL",
+  "license": " AGPL-3.0-only",
+  "scripts": {
+    "build": "npx tsc"
+  },
+  "main": "dist/index.js",
+  "bin": {
+    "enjinscraper": "./dist/index.js"
+  },
   "devDependencies": {
     "@types/escodegen": "^0.0.7",
     "@types/esprima": "^4.0.3",
