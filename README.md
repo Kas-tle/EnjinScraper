@@ -19,7 +19,7 @@ For Windows, open a Powershell prompt and do the following:
 ```ps1
 winget install -e --id OpenJS.NodeJS
 winget install -e --id Git.Git
-npm install --global yarn
+winget install -e --id Yarn.Yarn
 ```
 
 #### Scraper
