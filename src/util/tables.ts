@@ -557,4 +557,14 @@ export const tableSchemas: TableSchema[] = [
             'points_adjusted TEXT'
         ],
     },
+
+    // Files
+    {
+        name: 's3_files',
+        schema: [
+            'filename TEXT',
+            'url TEXT',
+            'dirPath TEXT',
+        ]
+    },
 ];

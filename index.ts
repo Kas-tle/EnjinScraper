@@ -138,9 +138,9 @@ async function main(): Promise<void> {
     } else if (await isModuleScraped(database, 'files')) {
         console.log('Files already scraped, skipping file scraping...');
     } else {
-        await getFiles(config.domain, siteAuth, siteID)
+        await getFiles(config.domain, database, siteAuth, siteID);
         await insertRow(database, 'scrapers', 'files', true);
-        deleteFiles(['./target/recovery/file_progress.json']);
+        deleteFiles(['./target/recovery/s3_file_progress.json', './target/recovery/wiki_file_progress.json']);
     }
 
     process.kill(process.pid, 'SIGINT');

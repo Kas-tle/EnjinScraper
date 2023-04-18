@@ -63,3 +63,8 @@ export interface FileData {
     url: string;
     dirPath: string;
 }
+
+type S3FilesTuple = [
+    string, string, string
+]
+export interface S3FilesDB extends Array<S3FilesTuple[number]> {}

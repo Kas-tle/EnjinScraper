@@ -1,4 +1,4 @@
-import { Directory, DirectoryListing, FileData } from "../interfaces/files";
+import { Directory, DirectoryListing, FileData, S3FilesDB } from "../interfaces/files";
 import { SiteAuth } from "../interfaces/generic";
 import { addExitListeners, removeExitListeners } from "../util/exit";
 import { getRequest, postRequest, throttledGetRequest } from "../util/request";
@@ -6,6 +6,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileExists, parseJsonFile } from "../util/files";
 import { getErrorMessage } from "../util/error";
+import { Database } from "sqlite3";
+import { insertRows } from "../util/database";
 
 async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: string, path: string): Promise<DirectoryListing> {
     const fileData = new URLSearchParams({
@@ -36,7 +38,7 @@ function getListedFiles(data: Directory.Data[]): string[] {
     return filteredData.map(([name]) => name);
 }
 
-async function getAllFileUrls(domain: string, siteAuth: SiteAuth, token: string, dirPath: string): Promise<FileData[]> {
+async function getS3FileUrls(domain: string, siteAuth: SiteAuth, token: string, dirPath: string): Promise<FileData[]> {
     const dirListing = await getDirectoryListing(domain, siteAuth, token, dirPath);
     const subDirs = getListedDirectories(dirListing.data);
     const files = getListedFiles(dirListing.data).filter(file => !subDirs.includes(file));
@@ -49,7 +51,7 @@ async function getAllFileUrls(domain: string, siteAuth: SiteAuth, token: string,
     let subDirTotalFiles = 0;
 
     for (const subDir of subDirs) {
-        const subDirFileData = await getAllFileUrls(domain, siteAuth, token, dirPath + '/' + subDir);
+        const subDirFileData = await getS3FileUrls(domain, siteAuth, token, dirPath + '/' + subDir);
         subDirTotalFiles += subDirFileData.length;
         allFileData.push(...subDirFileData);
     }
@@ -60,17 +62,27 @@ async function getAllFileUrls(domain: string, siteAuth: SiteAuth, token: string,
     return allFileData;
 }
 
-async function downloadFiles(files: FileData[], targetPath: string) {
+async function downloadS3Files(database: Database, targetPath: string) {
     let fileCount = [0];
 
-    if(fileExists('./target/recovery/file_progress.json')) {
-        console.log('Recovering file download progress previous session...')
-        const progress = parseJsonFile('./target/recovery/file_progress.json') as [FileData[], number[]];
-        files = progress[0];
-        fileCount = progress[1];
+    let files: [{filename: string, url: string, dirPath: string}] = await new Promise((resolve, reject) => {
+        database.all('SELECT filename, url, dirPath FROM s3_files',
+            (err, rows: [{filename: string, url: string, dirPath: string}]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+    });
+
+    if(fileExists('./target/recovery/s3_file_progress.json')) {
+        console.log('Recovering s3 file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/s3_file_progress.json') as [number[]];
+        fileCount = progress[0];
     }
 
-    addExitListeners(['./target/recovery/file_progress.json'],[[files, fileCount]])
+    addExitListeners(['./target/recovery/s3_file_progress.json'],[[fileCount]])
 
     const totalFiles = files.length;
 
@@ -92,10 +104,62 @@ async function downloadFiles(files: FileData[], targetPath: string) {
     }
 }
 
-export async function getFiles(domain: string, siteAuth: SiteAuth, siteID: string) {
-    let allFileUrls: FileData[] = [];
+async function downloadWikiFiles(database: Database, targetPath: string) {
+    let fileCount = [0];
 
-    if (!fileExists('./target/recovery/file_progress.json')) {
+    let wikiFiles: [{preset_id: string, path: string, name: string}] = await new Promise((resolve, reject) => {
+        database.all('SELECT preset_id, path, name FROM wiki_uploads',
+            (err, rows: [{preset_id: string, path: string, name: string}]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+    });
+
+    if(fileExists('./target/recovery/wiki_file_progress.json')) {
+        console.log('Recovering file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/wiki_file_progress.json') as [number[]];
+        fileCount = progress[0];
+    }
+
+    addExitListeners(['./target/recovery/wiki_file_progress.json'],[[fileCount]])
+
+    const totalFiles = wikiFiles.length;
+
+    if (totalFiles > 0) {
+        const cfbmTokenResponse = await getRequest('', wikiFiles[0].path, {}, '', true, 'arraybuffer');
+        const setCookie = cfbmTokenResponse.headers['set-cookie'];
+        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+
+        for (let i = fileCount[0]; i < totalFiles; i++) {
+            try {
+                const file = wikiFiles[i];
+                const response = await getRequest('', file.path, {
+                    Cookie: cfbmToken,
+                }, '', true, 'arraybuffer');
+    
+                const filePath = path.join(targetPath, file.preset_id, file.name);
+                const fileDirectory = path.dirname(filePath);
+                await fs.mkdir(fileDirectory, { recursive: true });
+    
+                await fs.writeFile(filePath, response.data, { encoding: null });
+                console.log(`Downloaded ${file.path} with size ${response.data.length} bytes (${++fileCount[0]}/${totalFiles})`);
+            } catch (error) {
+                console.log (`Error downloading ${wikiFiles[i].path}: ${getErrorMessage(error)}`);
+                console.log (`Skipping file ${wikiFiles[i].path} (${++fileCount[0]}/${totalFiles})`);
+            }
+        }
+    } else {
+        console.log('No wiki files found');
+    }
+}
+
+export async function getFiles(domain: string, database: Database, siteAuth: SiteAuth, siteID: string) {
+    const s3Exists = fileExists('./target/recovery/s3_file_progress.json');
+    const wikiExists = fileExists('./target/recovery/wiki_file_progress.json');
+    if (!s3Exists && !wikiExists) {
         const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
             Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
             Origin: `https://${domain}`,
@@ -103,11 +167,27 @@ export async function getFiles(domain: string, siteAuth: SiteAuth, siteID: strin
         })
         const token = tokenResponse.data.token;
         
-        allFileUrls = await getAllFileUrls(domain, siteAuth, token, `/${siteID}`);
+        const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
+        const s3FilesDB: S3FilesDB[] = [];
+        for (const file of s3FileUrls) {
+            s3FilesDB.push([
+                file.filename,
+                file.url,
+                file.dirPath,
+            ]);
+        }
+        await insertRows(database, 's3_files', s3FilesDB);
     }
 
-    const filePath = path.join(process.cwd(), './target/files');
-    await downloadFiles(allFileUrls, filePath);
+    if (!wikiExists) {
+        console.log('Getting s3 files...');
+        const filePath = path.join(process.cwd(), './target/files');
+        await downloadS3Files(database, filePath);
+    }
+
+    console.log('Getting wiki files...');
+    const wikiFilePath = path.join(process.cwd(), './target/files/wiki');
+    await downloadWikiFiles(database, wikiFilePath);
 
     removeExitListeners();
 }
