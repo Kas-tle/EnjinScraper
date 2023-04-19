@@ -6,6 +6,7 @@ import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest, getRequest } from '../util/request';
 import { SiteAuth } from '../interfaces/generic';
+import { MessageType, statusMessage } from '../util/console';
 
 async function getTicketModules(database: Database, domain: string, apiKey: string): Promise<string[]> {
 
@@ -19,7 +20,7 @@ async function getTicketModules(database: Database, domain: string, apiKey: stri
     ][] = [];
 
     if (data.error) {
-        console.log(`Error getting ticket modules: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting ticket modules: ${data.error.code} ${data.error.message}`)
         return [];
     }
 
@@ -56,7 +57,7 @@ async function getTicketReplies(domain: string, sessionID: string, ticketCode: s
         const data = await enjinRequest<Tickets.GetReplies>(params, 'Tickets.getReplies', domain);
 
         if (data.error) {
-            console.log(`Error getting replies for ticket ${ticketCode}: ${data.error.code} ${data.error.message}`)
+            statusMessage(MessageType.Error, `Error getting replies for ticket ${ticketCode}: ${data.error.code} ${data.error.message}`)
             break;
         }
 
@@ -101,13 +102,13 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
             const data = await enjinRequest<Tickets.GetTickets>(params, 'Tickets.getTickets', domain);
 
             if (data.error) {
-                console.log(`Error getting tickets for module ${modules[i]} page ${page[0]}: ${data.error.code} ${data.error.message}`)
+                statusMessage(MessageType.Error, `Error getting tickets for module ${modules[i]} page ${page[0]}: ${data.error.code} ${data.error.message}`)
                 break;
             }
 
             lastPage[0] = data.result.pagination.nr_pages;
             tickets += data.result.results.length;
-            console.log(`Scraping tickets for module ${modules[i]} page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
+            statusMessage(MessageType.Process, `Scraping tickets for module ${modules[i]} page [(${page[0]}/${lastPage}) (${moduleCount[0]+1}/${totalModules})]`);
 
             for (let j = ticketCount[0]; j < data.result.results.length; j++) {
                 const ticket = data.result.results[j];
@@ -145,13 +146,13 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                     values[values.length-1] = JSON.stringify(uploads);
                 }
                 await insertRow(database, 'tickets', ...values);
-                console.log(`Scraping ticket ${ticket.id} (${++ticketCount[0]}/${data.result.results.length}) page (${page[0]}/${lastPage}) module (${moduleCount[0]+1}/${totalModules})...`);
+                statusMessage(MessageType.Process, `Scraping ticket ${ticket.id} [(${++ticketCount[0]}/${data.result.results.length}) (${page[0]}/${lastPage}) (${moduleCount[0]+1}/${totalModules})]`);
             }
             ticketCount[0] = 0;
             page[0]++;
         }
         page[0] = 1;
-        console.log(`Scraped all tickets for module ${modules[i]}. (${++moduleCount[0]}/${totalModules})`);
+        statusMessage(MessageType.Process, `Scraped all tickets for module ${modules[i]}. [(++${moduleCount[0]}/${totalModules})]`);
         tickets = 0;
     }
     removeExitListeners();
@@ -160,7 +161,7 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
 async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: string, ticketModule: String): Promise<TicketUpload[]> {
     const homeResponse = await getRequest(domain, `/ajax.php?code=${ticketCode}&s=editmodule_tickets&cmd=ticket_html&preset_id=${ticketModule}&saved_data%5Bmode%5D=public`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-    });
+    }, '/tickets');
 
     const uploads: TicketUpload[] = [];
     const $ = cheerio.load(homeResponse.data);
@@ -176,13 +177,12 @@ async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: 
         }
     });
 
-    console.log(`Found ${uploads.length} uploads for ticket ${ticketCode}.`)
+    statusMessage(MessageType.Process, `Found ${uploads.length} uploads for ticket ${ticketCode}`);
 
     return uploads;
 }
 
 export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string, siteAuth: SiteAuth, excludedModules: string[] | null) {
-    console.log('Getting all tickets...');
     let modules: string[];
     if (fileExists('./target/recovery/module_tickets.json')) {
         modules = [];
@@ -190,6 +190,6 @@ export async function getAllTickets(database: Database, domain: string, apiKey: 
         modules = await getTicketModules(database, domain, apiKey);
     }
     excludedModules ? modules = modules.filter(module => !excludedModules.includes(module)) : {};
-    console.log(`Found ${modules.length} ticket modules: ${modules.join(', ')}.`);
+    statusMessage(MessageType.Info, `Found ${modules.length} ticket modules: ${modules.join(', ')}`);
     await getTicketsByModule(database, domain, sessionID, siteAuth, modules);
 }

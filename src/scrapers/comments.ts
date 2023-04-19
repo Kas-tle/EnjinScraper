@@ -5,6 +5,7 @@ import { CommentResponse, CommentsDB, Comment } from '../interfaces/comments';
 import { insertRows } from '../util/database';
 import { fileExists, parseJsonFile } from '../util/files';
 import { addExitListeners, removeExitListeners } from '../util/exit';
+import { MessageType, statusMessage } from '../util/console';
 
 export async function getComments(database: Database, domain: string, siteAuth: SiteAuth) {
     let commentCids: string[] = [];
@@ -12,11 +13,12 @@ export async function getComments(database: Database, domain: string, siteAuth: 
     commentCids.push(...await getTableCommentCids(database, 'news_articles'));
     commentCids.push(...await getTableCommentCids(database, 'application_responses'));
     commentCids.push(...await getTableCommentCids(database, 'wiki_pages'));
+    commentCids.push(...await getTableCommentCids(database, 'gallery_images'));
 
-    console.log(`Found ${commentCids.length} comments to scrape.`);
+    statusMessage(MessageType.Info, `Found ${commentCids.length} comments to scrape`)
 
     if (commentCids.length === 0) {
-        console.log('No comments to scrape.');
+        statusMessage(MessageType.Critical, 'No comments to scrape');
         return;
     }
 
@@ -42,9 +44,9 @@ export async function getComments(database: Database, domain: string, siteAuth: 
         flattenComments(response.comments, commentsDB);
         if (commentsDB.length > 0) {
             await insertRows(database, 'comments', commentsDB);
-            console.log(`Found ${response.total} comments for comment cid ${commentCids[i]}... (${++commentCidsCount[0]}/${totalCommentCids})`);
+            statusMessage(MessageType.Process, `Found ${response.total} comments for comment cid ${commentCids[i]} [(${++commentCidsCount[0]}/${totalCommentCids})]`);
         } else {
-            console.log(`Found 0 comments for comment cid ${commentCids[i]}... (${++commentCidsCount[0]}/${totalCommentCids})`);
+            statusMessage(MessageType.Process, `Found 0 comments for comment cid ${commentCids[i]} [(${++commentCidsCount[0]}/${totalCommentCids})]`);
         }
     }
 

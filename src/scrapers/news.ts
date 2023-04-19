@@ -4,6 +4,7 @@ import { News, NewsArticle } from '../interfaces/news';
 import { insertRow } from '../util/database';
 import { enjinRequest, throttledGetRequest } from '../util/request';
 import { SiteAuth } from '../interfaces/generic';
+import { MessageType, statusMessage } from '../util/console';
 
 interface NewsContent {
     [key: string]: {
@@ -19,7 +20,7 @@ async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAu
 
     let page = 1;
     do {
-        console.log(`Getting news posts for module ${newsModuleID} page ${page}...`);
+        statusMessage(MessageType.Process, `Getting news posts for module ${newsModuleID} page ${page}...`);
 
         const params = {
             preset_id: newsModuleID,
@@ -29,7 +30,7 @@ async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAu
         const data = await enjinRequest<News.GetNews>(params, 'News.getNews', domain);
 
         if (data.error) {
-            console.log(`Error getting news posts for module ${newsModuleID}: ${data.error.code} ${data.error.message}`)
+            statusMessage(MessageType.Error, `Error getting news posts for module ${newsModuleID}: ${data.error.code} ${data.error.message}`);
             break;
         }
 
@@ -86,7 +87,7 @@ async function getNewsCommentsCid(domain: string, siteAuth: SiteAuth, moduleID: 
         }
     });
 
-    console.log(`Found comment cid ${commentCid} for news article ${articleID}`);
+    statusMessage(MessageType.Plain, `Found comment cid ${commentCid} for news article ${articleID}`);
     return commentCid;
 }
 
@@ -95,7 +96,7 @@ export async function getNews(database: Database, domain: string, sessionID: str
     const totalNewsModules = newsModuleIDs.length;
     let currentNewsModule = 1;
     for (const newsModuleID of newsModuleIDs) {
-        console.log(`Getting news posts for module ${newsModuleID}... (${currentNewsModule}/${totalNewsModules})`);
+        statusMessage(MessageType.Process, `Getting news posts for module ${newsModuleID} [(${currentNewsModule}/${totalNewsModules})]`);
         await getModuleNews(domain, sessionID, siteAuth, newsModuleID, database);
     }
 }

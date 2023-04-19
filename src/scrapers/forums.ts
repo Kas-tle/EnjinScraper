@@ -4,6 +4,7 @@ import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
 import { insertRow, insertRows, updateRow } from '../util/database';
+import { MessageType, statusMessage } from '../util/console';
 
 async function getModuleForumIDs(database: Database, domain: string, sessionID: string, forumModuleID: string): Promise<string[][]> {
     // Write forum_modules table and forums table
@@ -18,7 +19,7 @@ async function getModuleForumIDs(database: Database, domain: string, sessionID: 
     const data = await enjinRequest<Forum.GetCategoriesAndForums>(params, 'Forum.getCategoriesAndForums', domain);
 
     if (data.error) {
-        console.log(`Error getting forum IDs for forum module ${forumModuleID}: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting forum IDs for forum module ${forumModuleID}: ${data.error.code} ${data.error.message}`)
         return forumIDs;
     }
 
@@ -149,7 +150,7 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
         const data = await enjinRequest<Forum.GetForum>(params, 'Forum.getForum', domain);
 
         if (data.error) {
-            console.log(`Error getting thread IDs for forum ${forumID[1]}: ${data.error.code} ${data.error.message}`)
+            statusMessage(MessageType.Error, `Error getting thread IDs for forum ${forumID[1]}: ${data.error.code} ${data.error.message}`);
             break;
         }
 
@@ -243,7 +244,7 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
     let totalPages = 1;
 
     do {
-        console.log(`Getting thread ${threadID[2]} page ${page}...`)
+        statusMessage(MessageType.Process, `Getting thread ${threadID[2]} page ${page}...`)
         const params = {
             thread_id: threadID[2],
             session_id: sessionID,
@@ -252,7 +253,7 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
         const data = await enjinRequest<Forum.GetThread>(params, 'Forum.getThread', domain);
 
         if (data.error) {
-            console.log(`Error getting thread ${threadID[2]} page ${page}: ${data.error.code} ${data.error.message}`)
+            statusMessage(MessageType.Error, `Error getting thread ${threadID[2]} page ${page}: ${data.error.code} ${data.error.message}`)
             break;
         }
 
@@ -315,7 +316,7 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
         page++;
     } while (page <= totalPages);
 
-    console.log(`Finished getting all pages for thread ${threadID[2]}.`)
+    statusMessage(MessageType.Process, `Finished getting all pages for thread ${threadID[2]}.`)
 }
 
 interface ForumContent {
@@ -327,7 +328,6 @@ interface ForumContent {
 }
 
 export async function getForums(database: Database, domain: string, sessionID: string, forumModuleIDs: string[]): Promise<ForumContent> {
-    console.log('Getting forum content...')
     let forumContent: ForumContent = {};
     let forumIDs: string[][] = [];
     let threadIDs: string[][] = [];
@@ -336,7 +336,7 @@ export async function getForums(database: Database, domain: string, sessionID: s
     let threadCount = [0];
 
     if (fileExists('./target/recovery/forum_progress.json')) {
-        console.log('Recovering from previous session...')
+        statusMessage(MessageType.Info, 'Recovering from previous session...')
         const progress = parseJsonFile('./target/recovery/forum_progress.json') as (string | number)[][];
 
         forumModuleIDs = progress[0] as string[];
@@ -348,7 +348,7 @@ export async function getForums(database: Database, domain: string, sessionID: s
         threadCount[0] = progress[5][0] as number;
         threadIDs = progress[2] as unknown as string[][];
     }
-    console.log(`Starting at... Module count: ${moduleCount[0]} Forum count: ${forumCount[0]} Thread count: ${threadCount[0]}`)
+    statusMessage(MessageType.Info, `Starting at... Module count: ${moduleCount[0]} Forum count: ${forumCount[0]} Thread count: ${threadCount[0]}`)
 
     addExitListeners(
         ['./target/recovery/forum_progress.json'],
@@ -361,7 +361,7 @@ export async function getForums(database: Database, domain: string, sessionID: s
         const moduleForumIDs = await getModuleForumIDs(database, domain, sessionID, forumModuleIDs[i]);
         forumIDs.push(...moduleForumIDs);
 
-        console.log(`Found ${moduleForumIDs.length} forums in module ${forumModuleIDs[i]}... (${++moduleCount[0]}/${totalModules})`)
+        statusMessage(MessageType.Process, `Found ${moduleForumIDs.length} forums in module ${forumModuleIDs[i]}... [(${++moduleCount[0]}/${totalModules})]`)
     }
 
     const totalForums = forumIDs.length;
@@ -370,14 +370,14 @@ export async function getForums(database: Database, domain: string, sessionID: s
         const moduleThreadIDs = await getForumThreadIDs(database, domain, sessionID, forumIDs[i]);
         threadIDs.push(...moduleThreadIDs);
 
-        console.log(`Found ${moduleThreadIDs.length} threads in forum ${forumIDs[i][1]}... (${++forumCount[0]}/${totalForums})`)
+        statusMessage(MessageType.Process, `Found ${moduleThreadIDs.length} threads in forum ${forumIDs[i][1]}... [(${++forumCount[0]}/${totalForums})]`)
     }
 
     const totalThreads = threadIDs.length;
 
     for (let i = threadCount[0]; i < totalThreads; i++) {
         await getThreadContent(database, domain, sessionID, threadIDs[i]);
-        console.log(`Found all forum content for thread ${threadIDs[i][2]}... (${++threadCount[0]}/${totalThreads})`)
+        statusMessage(MessageType.Process, `Found all forum content for thread ${threadIDs[i][2]}... [(${++threadCount[0]}/${totalThreads})]`)
     }
 
     removeExitListeners();

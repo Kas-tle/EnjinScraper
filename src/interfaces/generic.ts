@@ -28,6 +28,8 @@ export interface Params {
     title? : string;
     prop? : string[];
     oldid? : string;
+    domain? : string;
+    album_id? : string;
 }
 
 export interface Pagination {

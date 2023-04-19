@@ -8,6 +8,7 @@ import { fileExists, parseJsonFile } from "../util/files";
 import { getErrorMessage } from "../util/error";
 import { Database } from "sqlite3";
 import { insertRows } from "../util/database";
+import { MessageType, statusMessage } from "../util/console";
 
 async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: string, path: string): Promise<DirectoryListing> {
     const fileData = new URLSearchParams({
@@ -18,7 +19,7 @@ async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: st
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Origin: `https://${domain}`,
         Referer: `https://${domain}/admin/files`,
-    });
+    }, '/files');
 
     const dirListing: DirectoryListing = dirResponse.data.result;
     return dirListing;
@@ -56,8 +57,8 @@ async function getS3FileUrls(domain: string, siteAuth: SiteAuth, token: string, 
         allFileData.push(...subDirFileData);
     }
 
-    console.log(`Found ${files.length} files in ${dirPath}`);
-    console.log(`Found ${subDirTotalFiles} files in subdirectories of ${dirPath}`);
+    statusMessage(MessageType.Process, `Found ${files.length} files in ${dirPath}`)
+    statusMessage(MessageType.Process, `Found ${subDirTotalFiles} files in subdirectories of ${dirPath}`)
 
     return allFileData;
 }
@@ -77,7 +78,7 @@ async function downloadS3Files(database: Database, targetPath: string) {
     });
 
     if(fileExists('./target/recovery/s3_file_progress.json')) {
-        console.log('Recovering s3 file download progress previous session...')
+        statusMessage(MessageType.Info, 'Recovering s3 file download progress previous session...')
         const progress = parseJsonFile('./target/recovery/s3_file_progress.json') as [number[]];
         fileCount = progress[0];
     }
@@ -96,10 +97,10 @@ async function downloadS3Files(database: Database, targetPath: string) {
             await fs.mkdir(fileDirectory, { recursive: true });
     
             await fs.writeFile(filePath, response.data, { encoding: null });
-            console.log(`Downloaded ${file.url} with size ${response.data.length} bytes (${++fileCount[0]}/${totalFiles})`);
+            statusMessage(MessageType.Process, `Downloaded ${file.url} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
         } catch (error) {
-            console.log (`Error downloading ${files[i].url}: ${getErrorMessage(error)}`);
-            console.log (`Skipping file ${files[i].url} (${++fileCount[0]}/${totalFiles})`);
+            statusMessage(MessageType.Error, `Error downloading ${files[i].url}: ${getErrorMessage(error)}`)
+            statusMessage(MessageType.Error, `Skipping file ${files[i].url} [(${++fileCount[0]}/${totalFiles})]`)
         }
     }
 }
@@ -119,7 +120,7 @@ async function downloadWikiFiles(database: Database, targetPath: string) {
     });
 
     if(fileExists('./target/recovery/wiki_file_progress.json')) {
-        console.log('Recovering file download progress previous session...')
+        statusMessage(MessageType.Info, 'Recovering wiki file download progress previous session...')
         const progress = parseJsonFile('./target/recovery/wiki_file_progress.json') as [number[]];
         fileCount = progress[0];
     }
@@ -145,14 +146,14 @@ async function downloadWikiFiles(database: Database, targetPath: string) {
                 await fs.mkdir(fileDirectory, { recursive: true });
     
                 await fs.writeFile(filePath, response.data, { encoding: null });
-                console.log(`Downloaded ${file.path} with size ${response.data.length} bytes (${++fileCount[0]}/${totalFiles})`);
+                statusMessage(MessageType.Process, `Downloaded ${file.path} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
             } catch (error) {
-                console.log (`Error downloading ${wikiFiles[i].path}: ${getErrorMessage(error)}`);
-                console.log (`Skipping file ${wikiFiles[i].path} (${++fileCount[0]}/${totalFiles})`);
+                statusMessage(MessageType.Error, `Error downloading ${wikiFiles[i].path}: ${getErrorMessage(error)}`)
+                statusMessage(MessageType.Error, `Skipping file ${wikiFiles[i].path} [(${++fileCount[0]}/${totalFiles})]`)
             }
         }
     } else {
-        console.log('No wiki files found');
+        statusMessage(MessageType.Critical, 'No wiki files found')
     }
 }
 
@@ -164,7 +165,7 @@ export async function getFiles(domain: string, database: Database, siteAuth: Sit
             Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
             Origin: `https://${domain}`,
             Referer: `https://${domain}/admin/files`,
-        })
+        }, '/files')
         const token = tokenResponse.data.token;
         
         const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
@@ -180,12 +181,12 @@ export async function getFiles(domain: string, database: Database, siteAuth: Sit
     }
 
     if (!wikiExists) {
-        console.log('Getting s3 files...');
+        statusMessage(MessageType.Info, 'Getting s3 files...')
         const filePath = path.join(process.cwd(), './target/files');
         await downloadS3Files(database, filePath);
     }
 
-    console.log('Getting wiki files...');
+    statusMessage(MessageType.Info, 'Getting wiki files...')
     const wikiFilePath = path.join(process.cwd(), './target/files/wiki');
     await downloadWikiFiles(database, wikiFilePath);
 

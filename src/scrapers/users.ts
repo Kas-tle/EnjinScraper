@@ -7,9 +7,10 @@ import { UserIPs, UsersDB } from '../interfaces/user';
 import { SiteAuth } from '../interfaces/generic';
 import { fileExists, parseJsonFile } from '../util/files';
 import { addExitListeners, removeExitListeners } from '../util/exit';
+import { MessageType, statusMessage } from '../util/console';
 
 async function getUserIPs(domain: string, siteAuth: SiteAuth, database: Database) {
-    console.log('Getting all user IPs...')
+    statusMessage(MessageType.Info, 'Getting user IPs...')
 
     let userCount = [0];
 
@@ -26,7 +27,7 @@ async function getUserIPs(domain: string, siteAuth: SiteAuth, database: Database
     });
 
     if(fileExists('./target/recovery/user_ips.json')) {
-        console.log('Recovering user ip progress previous session...')
+        statusMessage(MessageType.Info, 'Recovering user ip progress previous session...')
         const progress = parseJsonFile('./target/recovery/user_ips.json') as [number[]];
         userCount = progress[0];
     }
@@ -43,7 +44,7 @@ async function getUserIPs(domain: string, siteAuth: SiteAuth, database: Database
 
         const userIPs: UserIPs = userIPsResponse.data;
         await updateRow(database, 'users', 'user_id', userIDs[i], ['ip_history'], [JSON.stringify(userIPs.ips_history)]);
-        console.log(`Found ${userIPs.ips_history.length} IPs for user ${userIDs[i]}... (${++userCount[0]}/${totalUsers})`);
+        statusMessage(MessageType.Process, `Found ${userIPs.ips_history.length} IPs for user ${userIDs[i]} [(${++userCount[0]}/${totalUsers})]`);
     }
 
     removeExitListeners();
@@ -52,14 +53,13 @@ async function getUserIPs(domain: string, siteAuth: SiteAuth, database: Database
 export async function getUsers(database: Database, domain: string, siteAuth: SiteAuth, apiKey: string, disableUserTags = false, disableUserIPs = false) {
     if(!fileExists('./target/recovery/user_ips.json')) {
         const allUserTags = await getAllUserTags(domain, apiKey, disableUserTags);
-        console.log('Getting all users...');
         let result: UserAdmin.Get = {};
         const userDB: UsersDB[] = [];
     
         let page = 1;
     
         do {
-            console.log(`Getting users page ${page}...`)
+            statusMessage(MessageType.Process, `Getting users page ${page}...`)
     
             const params = {
                 api_key: apiKey,
@@ -70,7 +70,7 @@ export async function getUsers(database: Database, domain: string, siteAuth: Sit
             const data = await enjinRequest<UserAdmin.Get>(params, 'UserAdmin.get', domain);
     
             if (data.error) {
-                console.log(`Error getting users page ${page}: ${data.error.code} ${data.error.message}`)
+                statusMessage(MessageType.Error, `Error getting users page ${page}: ${data.error.code} ${data.error.message}`)
                 break;
             }
     
@@ -108,6 +108,4 @@ export async function getUsers(database: Database, domain: string, siteAuth: Sit
     }
 
     disableUserIPs ? {} : await getUserIPs(domain, siteAuth, database);
-
-    console.log(`Finished getting all pages for users.`)
 }

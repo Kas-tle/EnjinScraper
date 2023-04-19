@@ -4,6 +4,7 @@ import { PageHistoryEntry, PageListEntry, Wiki, WikiCategoriesDB, WikiLikesDB, W
 import { addExitListeners, removeExitListeners } from "../util/exit";
 import { fileExists, parseJsonFile } from "../util/files";
 import { insertRow, insertRows } from "../util/database";
+import { MessageType, statusMessage } from "../util/console";
 
 async function getHistoricPageData(database: Database, domain: string, moduleID: string, page: PageHistoryEntry, cfbmToken: string, lastviewed: string) {
     const historicPageData = await enjinRequest<Wiki.GetPageTitle>({
@@ -16,7 +17,7 @@ async function getHistoricPageData(database: Database, domain: string, moduleID:
     });
 
     if (historicPageData.error) {
-        console.log(`Error getting wiki page ${page.page_id} revision ${page.rev_id}: ${historicPageData.error.code} ${historicPageData.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki page ${page.page_id} revision ${page.rev_id}: ${historicPageData.error.code} ${historicPageData.error.message}`)
         return [];
     }
 
@@ -74,7 +75,7 @@ async function getPageData(database: Database, domain: string, moduleID: string,
     });
 
     if (currentPageData.error) {
-        console.log(`Error getting wiki page ${page}: ${currentPageData.error.code} ${currentPageData.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki page ${page}: ${currentPageData.error.code} ${currentPageData.error.message}`)
         return [];
     }
 
@@ -139,7 +140,7 @@ async function getPageData(database: Database, domain: string, moduleID: string,
     });
 
     if (pageHistory.error) {
-        console.log(`Error getting wiki page ${page} history: ${pageHistory.error.code} ${pageHistory.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki page ${page} history: ${pageHistory.error.code} ${pageHistory.error.message}`)
         return [];
     }
 
@@ -152,7 +153,7 @@ async function getPagesByModule(domain: string, moduleID: string, cfbmToken: str
     });
 
     if (data.error) {
-        console.log(`Error getting wiki module ${moduleID}: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki module ${moduleID}: ${data.error.code} ${data.error.message}`)
         return [];
     }
 
@@ -165,7 +166,7 @@ async function getModuleCategories(database: Database, domain: string, moduleID:
     });
 
     if (data.error) {
-        console.log(`Error getting wiki module ${moduleID} categories: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki module ${moduleID} categories: ${data.error.code} ${data.error.message}`)
         return [];
     }
 
@@ -186,7 +187,7 @@ async function getModuleCategories(database: Database, domain: string, moduleID:
     if (wikiCategoriesDB.length > 0) {
         await insertRows(database, 'wiki_categories', wikiCategoriesDB);
     }
-    console.log(`Found ${wikiCategoriesDB.length} wiki categories for module ${moduleID}`);
+    statusMessage(MessageType.Process, `Found ${wikiCategoriesDB.length} wiki categories for module ${moduleID}`);
 }
 
 async function getModuleUploads(database: Database, domain: string, moduleID: string, cfbmToken: string, lastviewed: string) {
@@ -195,7 +196,7 @@ async function getModuleUploads(database: Database, domain: string, moduleID: st
     });
 
     if (data.error) {
-        console.log(`Error getting wiki module ${moduleID} uploads: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting wiki module ${moduleID} uploads: ${data.error.code} ${data.error.message}`)
         return [];
     }
 
@@ -227,7 +228,7 @@ export async function getWikis(domain: string, database: Database, wikiModuleIDs
     let recovery = false;
 
     if (fileExists('./target/recovery/wiki_progress.json')) {
-        console.log('Recovering from previous session...')
+        statusMessage(MessageType.Info, 'Recovering wiki progress from previous session...');
         const progress = parseJsonFile('./target/recovery/wiki_progress.json') as [string[], string[][], PageHistoryEntry[][], number[], number[], number[]];
 
         wikiModuleIDs = progress[0];
@@ -248,7 +249,7 @@ export async function getWikis(domain: string, database: Database, wikiModuleIDs
 
     for (let i = moduleCount[0]; i < totalModules; i++) {
         pages[0] = recovery ? pages[0] : await getPagesByModule(domain, wikiModuleIDs[i], cfbmToken, lastviewed);
-        !recovery ? console.log(`Found ${pages[0].length} pages in module ${wikiModuleIDs[i]} [(${moduleCount[0]+1}/${totalModules})]`) : {};
+        !recovery ? statusMessage(MessageType.Process, `Found ${pages[0].length} pages in module ${wikiModuleIDs[i]} [(${moduleCount[0]+1}/${totalModules})]`) : {};
 
         // Now we need to loop over the pages for wiki_pages table, followed by their history
         const totalPages = pages[0].length;
@@ -256,14 +257,14 @@ export async function getWikis(domain: string, database: Database, wikiModuleIDs
 
         for (let j = pageCount[0]; j < totalPages; j++) {
             pageHistory[0] = recovery ? pageHistory[0] : await getPageData(database, domain, wikiModuleIDs[i], pages[0][j], cfbmToken, lastviewed);
-            !recovery ? console.log(`Found ${pageHistory[0].length} revisions for page ${pages[0][j]} [(${pageCount[0]+1}/${totalPages}) (${moduleCount[0]+1}/${totalModules})]`) : {};
+            !recovery ? statusMessage(MessageType.Process, `Found ${pageHistory[0].length} revisions for page ${pages[0][j]} [(${pageCount[0]+1}/${totalPages}) (${moduleCount[0]+1}/${totalModules})]`) : {};
 
             const totalHistoricPages = pageHistory[0].length;
             historicPageCount[0] = recovery ? historicPageCount[0] : 0;
 
             for (let k = historicPageCount[0]; k < totalHistoricPages; k++) {
                 await getHistoricPageData(database, domain, wikiModuleIDs[i], pageHistory[0][k], cfbmToken, lastviewed);
-                console.log(`Found revision ${pageHistory[0][k].rev_id} for page ${pageHistory[0][k].page_title} [(${++historicPageCount[0]}/${totalHistoricPages}) (${pageCount[0]+1}/${totalPages}) (${moduleCount[0]+1}/${totalModules})]`)
+                statusMessage(MessageType.Process, `Found revision ${pageHistory[0][k].rev_id} for page ${pageHistory[0][k].page_title} [(${++historicPageCount[0]}/${totalHistoricPages}) (${pageCount[0]+1}/${totalPages}) (${moduleCount[0]+1}/${totalModules})]`);
             }
             recovery = false;
             ++pageCount[0];

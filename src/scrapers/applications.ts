@@ -9,12 +9,13 @@ import { fileExists, parseJsonFile, safeEval, writeJsonFile } from '../util/file
 import { Database } from 'sqlite3';
 import { insertRow, insertRows } from '../util/database';
 import { SiteAuth } from '../interfaces/generic';
+import { MessageType, statusMessage } from '../util/console';
 
 async function getApplicationTypes(domain: string): Promise<string[]> {
     const data = await enjinRequest<Applications.GetTypes>({}, 'Applications.getTypes', domain);
 
     if (data.error) {
-        console.log(`Error getting application types: ${data.error.code} ${data.error.message}`)
+        statusMessage(MessageType.Error, `Error getting application types: ${data.error.code} ${data.error.message}`);
         return [];
     }
 
@@ -23,14 +24,13 @@ async function getApplicationTypes(domain: string): Promise<string[]> {
 }
 
 async function getApplicationIDs(domain: string, types: string[], sessionID: string, siteID: string): Promise<string[]> {
-    console.log('Getting application IDs...');
     const applicationIDs: string[] = [];
 
     await Promise.all(types.map(async (type) => {
         let page = 1;
         try {
             while (true) {
-                console.log(`Getting application IDs for type ${type} page ${page}...`);
+                statusMessage(MessageType.Process, `Getting application IDs for type ${type} page ${page}...`);
 
                 const params = {
                     session_id: sessionID,
@@ -42,7 +42,7 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
                 const data = await enjinRequest<Applications.GetList>(params, 'Applications.getList', domain);
 
                 if (data.error) {
-                    console.log(`Error getting application IDs for application type ${type} on page ${page}: ${data.error.code} ${data.error.message}`)
+                    statusMessage(MessageType.Error, `Error getting application IDs for application type ${type} on page ${page}: ${data.error.code} ${data.error.message}`);
                     break;
                 }
 
@@ -54,7 +54,7 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
                 page++;
             }
         } catch (error) {
-            console.log(`Error getting application IDs: ${getErrorMessage(error)}`);
+            statusMessage(MessageType.Error, `Error getting application IDs: ${getErrorMessage(error)}`);
         }
     }));
 
@@ -79,7 +79,7 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
         }
     }
 
-    console.log(`Found comment cid ${commentCid} for application ${applicationID}`);
+    statusMessage(MessageType.Plain, `Found comment cid ${commentCid} for application ${applicationID}`);
     return commentCid;
 }
 
@@ -87,7 +87,7 @@ async function getApplication(domain: string, siteAuth: SiteAuth, presetID: stri
     const applicationResonse = await throttledGetRequest(domain, `/admin/editmodule/index/editoraction/form-builder/preset/${presetID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/admin/editmodule/index/editoraction/index/preset/${presetID}`
-    });
+    }, '/applications');
 
     const $ = cheerio.load(applicationResonse.data);
 
@@ -152,7 +152,7 @@ async function getApplication(domain: string, siteAuth: SiteAuth, presetID: stri
 
         return { elements, sections };
     }
-    console.log(`No application found for preset ${presetID}`)
+    statusMessage(MessageType.Critical, `No application found for preset ${presetID}`);
     return null;
 }
 
@@ -167,7 +167,7 @@ export async function getApplications(database: Database, domain: string, siteAu
                 }
             });
     });
-    console.log(`Found ${applications.length} application types in application responses table`)
+    statusMessage(MessageType.Info, `Found ${applications.length} application types in application responses table`);
 
     const applicationDB: ApplicationsDB[] = [];
     for (const application of applications) {
@@ -184,12 +184,12 @@ export async function getApplications(database: Database, domain: string, siteAu
 
     for (let i = 0; i < applications.length; i++) {
         const presetID = applications[i].preset_id;
-        console.log(`Gettting questions and sections for application ${presetID} (${i+1}/${applications.length}))`);
+        statusMessage(MessageType.Process, `Gettting questions and sections for application ${presetID} [(${i+1}/${applications.length})]`);
 
         const applicationConent = await getApplication(domain, siteAuth, presetID);
 
         if (!applicationConent) {
-            console.log(`Failed to get application ${presetID}`);
+            statusMessage(MessageType.Critical, `Failed to get application ${presetID}`);
             continue;
         }
 
@@ -237,15 +237,12 @@ export async function getApplications(database: Database, domain: string, siteAu
 }
 
 export async function getApplicationResponses(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {
-    console.log('Getting applications...');
-    await insertRow(database, 'scrapers', 'application_responses', false);
-
     const applicationTypes = await getApplicationTypes(domain);
-    console.log(`Application types: ${applicationTypes.join(', ')}`);
+    statusMessage(MessageType.Info, `Found ${applicationTypes.length} application types: ${applicationTypes.join(', ')}`);
 
     let applicationIDs: string[] = [];
     if (fileExists('./target/recovery/application_ids.json')) {
-        console.log('Found recovery file, skipping application ID retrieval.');
+        statusMessage(MessageType.Info, 'Found recovery file, skipping application ID retrieval.');
         applicationIDs = parseJsonFile('./target/recovery/application_ids.json') as string[];
     } else {
         applicationIDs = await getApplicationIDs(domain, applicationTypes, sessionID, siteID);
@@ -253,12 +250,12 @@ export async function getApplicationResponses(database: Database, domain: string
     }
 
     const totalApplications = applicationIDs.length;
-    console.log(`Found ${totalApplications} to download.`)
+    statusMessage(MessageType.Process, `Found ${totalApplications} applications to download.`);
 
     let currentApplication = 1;
 
     if (fileExists('./target/recovery/remaining_applications.json')) {
-        console.log('Found recovery applications file, starting where we left off.');
+        statusMessage(MessageType.Info, 'Found recovery applications file, starting where we left off.');
         applicationIDs = parseJsonFile('./target/recovery/remaining_applications.json') as string[];
         currentApplication = totalApplications - applicationIDs.length + 1;
     }
@@ -268,7 +265,7 @@ export async function getApplicationResponses(database: Database, domain: string
 
     try {
         for (const id of applicationIDs) {
-            console.log(`Getting application ${id}... (${currentApplication++}/${totalApplications})`);
+            statusMessage(MessageType.Process, `Getting application ${id} [(${currentApplication++}/${totalApplications})]`);
 
             const params = {
                 session_id: sessionID,
@@ -278,7 +275,7 @@ export async function getApplicationResponses(database: Database, domain: string
             const data = await enjinRequest<Applications.GetApplication>(params, 'Applications.getApplication', domain);
 
             if (data.error) {
-                console.log(`Error getting application ${id}: ${data.error.code} ${data.error.message}`)
+                statusMessage(MessageType.Error, `Error getting application ${id}: ${data.error.code} ${data.error.message}`);
                 continue;
             }
 
@@ -335,7 +332,7 @@ export async function getApplicationResponses(database: Database, domain: string
             })
         }
     } catch (error) {
-        console.log(`Error getting applications: ${getErrorMessage(error)}`);
+        statusMessage(MessageType.Error, `Error getting applications: ${getErrorMessage(error)}`);
     }
 
     removeExitListeners();

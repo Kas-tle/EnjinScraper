@@ -1,6 +1,7 @@
 import fs, { promises, createWriteStream } from 'fs';
 import path from 'path';
 import { getErrorMessage } from './error';
+import { MessageType, statusMessage } from './console';
 
 export async function ensureDirectory(directory: string) {
     try {
@@ -27,8 +28,7 @@ export function writeJsonFile(filename: string, data: any): void {
     } catch (error) {
         console.error(`Failed to write file ${filename}: ${getErrorMessage(error)}`);
         if (error instanceof RangeError) {
-            console.log('File too big. You hate to see it.');
-
+            statusMessage(MessageType.Error, `File too big. You hate to see it.`);
         }
     }
 }
@@ -46,8 +46,7 @@ export function writeTextFile(filename: string, data: any): void {
     } catch (error) {
         console.error(`Failed to write file ${filename}: ${getErrorMessage(error)}`);
         if (error instanceof RangeError) {
-            console.log('File too big. You hate to see it.');
-
+            statusMessage(MessageType.Error, `File too big. You hate to see it.`);
         }
     }
 }

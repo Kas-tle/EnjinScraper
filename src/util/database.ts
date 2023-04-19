@@ -3,6 +3,7 @@ import path from 'path';
 import { Database } from 'sqlite3';
 import { TableSchema } from '../interfaces/tableschema';
 import { tableSchemas } from './tables';
+import { MessageType, statusMessage } from './console';
 
 let database: any = null;
 
@@ -12,10 +13,10 @@ export async function databaseConnection(): Promise<Database> {
             const databasePath = path.join(process.cwd(),'./target/site.sqlite');
             database = new sqlite3.Database(databasePath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err: { message: any; }) => {
                 if (err) {
-                    console.error(err.message);
+                    statusMessage(MessageType.Error, `Error connecting to the database: ${err.message}`);
                     reject(err);
                 }
-                console.log('Connected to the database.');
+                statusMessage(MessageType.Info, `Connected to the database`)
                 resolve(database);
             });
         } else {
@@ -32,10 +33,10 @@ export async function initializeTables(database: Database): Promise<void> {
                 `CREATE TABLE IF NOT EXISTS ${table.name} (${columns})`,
                 (err: { message: any }) => {
                     if (err) {
-                        console.error(`Error creating table '${table.name}':`, err.message);
+                        statusMessage(MessageType.Error, `Error creating table '${table.name}': ${err.message}`);
                         reject(err);
                     } else {
-                        console.log(`Table '${table.name}' created successfully.`);
+                        statusMessage(MessageType.Completion, `Table '${table.name}' created successfully`);
                         resolve();
                     }
                 }
@@ -52,10 +53,10 @@ export async function queryTable(database: Database, table: String): Promise<voi
     return new Promise((resolve, reject) => {
         database.all(`SELECT * FROM ${table}`, (err: Error | null, rows: any[]) => {
             if (err) {
-                console.error(`Error querying table '${table}':`, err.message);
+                statusMessage(MessageType.Error, `Error querying table '${table}': ${err.message}`);
                 reject();
             } else {
-                console.log(rows);
+                statusMessage(MessageType.Plain, `${rows}`);
                 resolve();
             }
         });
@@ -85,16 +86,16 @@ export async function insertRow(database: Database, table: string, ...params: (s
             const statement = database.prepare(`INSERT OR REPLACE INTO ${table} VALUES (${values})`);
             statement.run(...params, (err: any) => {
                 if (err) {
-                    console.error(`Error inserting into table '${table}' with params [${params.join(', ')}]:`, err.message);
+                    statusMessage(MessageType.Error, `Error inserting into table '${table}' with params [${params.join(', ')}]: ${err.message}`);
                     reject(err);
                 } else {
-                    console.log(`Inserted ${params[0]} into table '${table}' successfully.`);
+                    statusMessage(MessageType.Plain, `Inserted ${params[0]} into table '${table}'`);
                     resolve();
                 }
                 statement.finalize(); // finalize the statement to release resources
             });
         } catch (err: any) {
-            console.error(`Error preparing statement for table '${table}':`, err.message);
+            statusMessage(MessageType.Error, `Error preparing statement for table '${table}': ${err.message}`);
             reject(err);
         }
     });
@@ -110,16 +111,16 @@ export async function updateRow(database: Database, table: string, whereKey: str
 
             statement.run(allParams, (err: any) => {
                 if (err) {
-                    console.error(`Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValue}':`, err.message);
+                    statusMessage(MessageType.Error, `Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValue}': ${err.message}`);
                     reject(err);
                 } else {
-                    console.log(`Updated row with '${whereKey}' = '${whereValue}' in table '${table}' successfully.`);
+                    statusMessage(MessageType.Plain, `Updated row with '${whereKey}' = '${whereValue}' in table '${table}'`);
                     resolve();
                 }
                 statement.finalize(); // finalize the statement to release resources
             });
         } catch (err: any) {
-            console.error(`Error preparing statement for table '${table}':`, err.message);
+            statusMessage(MessageType.Error, `Error preparing statement for table '${table}': ${err.message}`);
             reject(err);
         }
     });
@@ -135,17 +136,17 @@ export async function insertRows(database: Database, table: string, rows: (strin
             for (const row of rows) {
                 database.run(sql, row, (err) => {
                     if (err) {
-                        console.error(`Error inserting row into table '${table}':`, err.message);
+                        statusMessage(MessageType.Error, `Error inserting row into table '${table}': ${err.message}`);
                         reject(err);
                     }
                 });
             }
             database.run("COMMIT", (err) => {
                 if (err) {
-                    console.error(`Error committing transaction on table '${table}':`, err.message);
+                    statusMessage(MessageType.Error, `Error committing transaction on table '${table}': ${err.message}`);
                     reject(err);
                 } else {
-                    console.log(`Inserted ${rows.length} rows successfully into table '${table}'.`);
+                    statusMessage(MessageType.Plain, `Inserted ${rows.length} rows into table '${table}'`);
                     resolve();
                 }
             });
@@ -164,17 +165,17 @@ export async function updateRows(database: Database, table: string, whereKey: st
                 const allParams = [...updateValues[i], whereValues[i]];
                 database.run(sql, allParams, (err) => {
                     if (err) {
-                        console.error(`Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValues[i]}':`, err.message);
+                        statusMessage(MessageType.Error, `Error updating row in table '${table}' with whereKey '${whereKey}' and whereValue '${whereValues[i]}': ${err.message}`);
                         reject(err);
                     }
                 });
             }
             database.run("COMMIT", (err) => {
                 if (err) {
-                    console.error(`Error committing transaction on table '${table}':`, err.message);
+                    statusMessage(MessageType.Error, `Error committing transaction on table '${table}': ${err.message}`);
                     reject(err);
                 } else {
-                    console.log(`Rows updated successfully in table '${table}'.`);
+                    statusMessage(MessageType.Plain, `Updated ${whereValues.length} rows in table '${table}'`);
                     resolve();
                 }
             });
@@ -186,7 +187,7 @@ export async function isModuleScraped(database: Database, module: string): Promi
     return new Promise((resolve, reject) => {
         database.get(`SELECT scraped FROM scrapers WHERE module = ? AND scraped = ?`, [module, true], (err, row) => {
             if (err) {
-                console.error(`Error checking if ${module} has been scraped:`, err.message);
+                statusMessage(MessageType.Error, `Error checking if ${module} has been scraped: ${err.message}`);
                 reject(err);
             } else {
                 if (row) {

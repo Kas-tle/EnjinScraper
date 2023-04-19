@@ -4,6 +4,7 @@ import { getConfig } from './config';
 import { getErrorMessage } from "./error";
 import { EnjinResponse, Params } from "../interfaces/generic";
 import { writeJsonFile } from "./files";
+import { MessageType, statusMessage } from "./console";
 
 let id = 0;
 
@@ -35,23 +36,23 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
             return data;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                console.log(`Enjin API rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Enjin API rate limit exceeded, retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else if (error.response && error?.response.status === 403) {
-                console.log(`File is not available for download (403 Forbidden)`);
+                statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
             } else if (error.code === 'EAI_AGAIN') {
-                console.log(`DNS lookup error on request ${qid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${qid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making request ${qid}: ${getErrorMessage(error)}`);
+                statusMessage(MessageType.Error, `Error making request ${qid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    console.log(`Enjin API rate limit exceeded. Please try again later. Exiting...`)
+    statusMessage(MessageType.Error, `Enjin API rate limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
@@ -89,23 +90,23 @@ export async function getRequest(domain: string, url: string, headers: any, debu
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Cloudflare rate limit exceeded, retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else if (error.response && error?.response.status === 403) {
-                console.log(`File is not available for download (403 Forbidden)`);
+                statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
             } else if (error.code === 'EAI_AGAIN') {
-                console.log(`DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making get request ${rid}: ${getErrorMessage(error)}`);
+                statusMessage(MessageType.Error, `Error making get request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    console.log(`Cloudflare rate limit exceeded. Please try again later. Exiting...`)
+    statusMessage(MessageType.Error, `Cloudflare rate limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
@@ -159,23 +160,23 @@ export async function postRequest(domain: string, url: string, data: any, header
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                console.log(`Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Cloudflare rate limit exceeded, retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else if (error.response && error?.response.status === 403) {
-                console.log(`File is not available for download (403 Forbidden)`);
+                statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
             } else if (error.code === 'EAI_AGAIN') {
-                console.log(`DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
                 retries++;
                 await new Promise((resolve) => setTimeout(resolve, 5000));
             } else {
-                console.log(`Error making post request ${rid}: ${getErrorMessage(error)}`);
+                statusMessage(MessageType.Error, `Error making post request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    console.log(`Cloudflare rate limit exceeded. Please try again later. Exiting...`)
+    statusMessage(MessageType.Error, `Cloudflare rate limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }

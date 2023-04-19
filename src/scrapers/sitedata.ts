@@ -7,11 +7,12 @@ import { Database } from 'sqlite3';
 import { safeEval } from '../util/files';
 import { ModuleCategoriesDB, ModulesDB, PagesDB, PresetsDB, SiteData } from '../interfaces/sitedata';
 import { insertRow, insertRows } from '../util/database';
+import { MessageType, statusMessage } from '../util/console';
 
 async function fetchSiteDataObject(domain: string, siteAuth: SiteAuth): Promise<SiteData | null> {
     const siteResponse = await getRequest(domain, `/admin/modules/index`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`
-    });
+    }, '/sitedata');
 
     const $ = cheerio.load(siteResponse.data);
 
@@ -43,11 +44,11 @@ async function fetchSiteDataObject(domain: string, siteAuth: SiteAuth): Promise<
 
         const siteData: SiteData = siteObject ? safeEval(escodegen.generate(siteObject)) : {};
 
-        console.log('Found site data object.');
+        statusMessage(MessageType.Process, 'Site data object fetched')
         return siteData;
     }
 
-    console.log('Could not find site data object.');
+    statusMessage(MessageType.Error, 'Could not find site data object.');
     return null;
 }
 
@@ -154,6 +155,6 @@ export async function getSiteData(domain: string, siteAuth: SiteAuth, database: 
             JSON.stringify(siteData.licenses),
         )
 
-        console.log('Site data successfully inserted into database.');
+        statusMessage(MessageType.Completion, 'Site data successfully inserted into database.');
     }
 }

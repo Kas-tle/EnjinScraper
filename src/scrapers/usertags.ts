@@ -1,5 +1,6 @@
 import { Tags } from '../interfaces/tags';
 import { UserAdmin } from '../interfaces/useradmin';
+import { MessageType, statusMessage } from '../util/console';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
@@ -13,7 +14,7 @@ async function getUserTags(domain: string, apiKey: string, userID: string): Prom
     const data = await enjinRequest<UserAdmin.GetUserTags>(params, 'UserAdmin.getUserTags', domain);
 
     if (data.error) {
-        console.log(`Error getting user tags for user ${userID}: ${data.error.code} ${data.error.message}`);
+        statusMessage(MessageType.Error, `Error getting user tags for user ${userID}: ${data.error.code} ${data.error.message}`);
     }
 
     return data.result;
@@ -24,13 +25,13 @@ export async function getAllUserTags(domain: string, apiKey: string, disableUser
         return {}
     };
     
-    console.log('Getting all user tags...');
+    statusMessage(MessageType.Info, 'Getting all user tags...');
     let taggedUsers: string[] = [];
 
     if (!fileExists('./target/recovery/usertags.json')) {
         let page = 1;
         while (true) {
-            console.log(`Getting tagged users page ${page}...`);
+            statusMessage(MessageType.Process, `Getting tagged users page ${page}...`);
 
             const params = {
                 api_key: apiKey,
@@ -41,7 +42,7 @@ export async function getAllUserTags(domain: string, apiKey: string, disableUser
             const data = await enjinRequest<Tags.Get>(params, 'Tags.get', domain);
 
             if (data.error) {
-                console.log(`Error getting tagged users page ${page}: ${data.error.code} ${data.error.message}`);
+                statusMessage(MessageType.Error, `Error getting tagged users page ${page}: ${data.error.code} ${data.error.message}`);
                 break;
             }
 
@@ -72,7 +73,7 @@ export async function getAllUserTags(domain: string, apiKey: string, disableUser
         const userTags = await getUserTags(domain, apiKey, taggedUsers[i]);
 
         allUserTags[taggedUsers[i]] = userTags;
-        console.log(`Found ${userTags.length} tags for user ${taggedUsers[i]} (${++userCount[0]}/${totalUsers})...`);
+        statusMessage(MessageType.Process, `Found ${userTags.length} tags for user ${taggedUsers[i]} [(${++userCount[0]}/${totalUsers})]`);
     }
 
     removeExitListeners();
