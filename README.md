@@ -8,28 +8,17 @@ API calls used are described in detail [here](https://gist.github.com/Kas-tle/24
 
 Note that this is still a work in progress and as such installation and usage requires manual installation of dependencies and configuration of the `config.json` file. When done, I may opt to publish as a global npm package or distribute as a CLI electron app.
 
-### Installation
+### Quick Run With NPX
 
-#### NodeJS, Yarn, and Git
+#### Windows
 
-For Linux and MacOS users, you're best off using your system's respective package manager to install NodeJS and Git, then NPM to install yarn.
-
-For Windows, open a Powershell prompt and do the following:
+Run the following in Powershell:
 
 ```ps1
-winget install -e --id OpenJS.NodeJS
-winget install -e --id Git.Git
-winget install -e --id Yarn.Yarn
-```
-
-#### Scraper
-
-You should now be able to do the following in your system's respective terminal. For Windows, this is Powershell:
-
-```bash
-git clone https://github.com/Kas-tle/EnjinScraper.git
+mkdir EnjinScraper
 cd EnjinScraper
-yarn
+winget install -e --id OpenJS.NodeJS
+npx enjinscraper
 ```
 
 ### Configuration
@@ -42,7 +31,7 @@ Per Enjin's instructions:
 
 #### Configuring the `config.json`
 
-Create a `config.json` file in the root directory of the project. The file should look like this, but with comments omitted:
+Optionally, create a `config.json` file in the root directory of the project. Otherwise, you will be prompted for required values on first run. The file should look like this, but with comments omitted:
 
 ```jsonc
 {
@@ -67,9 +56,12 @@ Create a `config.json` file in the root directory of the project. The file shoul
 
 You should use an account with the greatest possible permissions, as that will increase the amount of content that can be scraped. Given that, the practical use of this tool is unfortunately limited to those with backend access to the site to be scraped. There is no neeed to enter module IDs, as the scraper will automatically gather info about all modules on the site.
 
-### Running
+### Running Manually
 
 ```bash
+git clone https://github.com/Kas-tle/EnjinScraper.git
+cd EnjinScraper
+yarn
 npx ts-node index.ts
 ```
 
