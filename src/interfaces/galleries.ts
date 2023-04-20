@@ -45,7 +45,7 @@ export namespace Gallery {
             title: string;
             description: string;
             image_id: string;
-            totla_images: string;
+            total_images: string;
             ordering: string;
         };
         can_comment: boolean;

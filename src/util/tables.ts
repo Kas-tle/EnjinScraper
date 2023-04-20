@@ -422,8 +422,27 @@ export const tableSchemas: TableSchema[] = [
     {
         name: 'ticket_modules',
         schema: [
-            'module_name TEXT PRIMARY KEY',
-            'questions JSON'
+            'preset_id TEXT PRIMARY KEY', 
+            'module_name TEXT',
+        ],
+    },
+    {
+        name: 'ticket_questions',
+        schema: [
+            'id TEXT PRIMARY KEY',
+            'site_id TEXT',
+            'preset_id TEXT',
+            'type TEXT',
+            'label TEXT',
+            'required TEXT',
+            'bold TEXT',
+            'help_text TEXT',
+            `'order' TEXT`,
+            'other_options JSON',
+            'options JSON',
+            'conditions JSON',
+            'condition_qualify TEXT',
+            'system TEXT',
         ],
     },
     {
@@ -452,9 +471,27 @@ export const tableSchemas: TableSchema[] = [
             'priority_name TEXT',
             'replies_count INTEGER',
             'private_reply_count INTEGER',
-            'replies JSON',
+            'has_replies BOOLEAN',
             'has_uploads BOOLEAN',
             'uploads JSON'
+        ],
+    },
+    {
+        name: 'ticket_replies',
+        schema: [
+            'id TEXT PRIMARY KEY',
+            'ticket_id TEXT',
+            'ticket_code TEXT',
+            'preset_id TEXT',
+            'sent TEXT',
+            'text TEXT',
+            'user_id TEXT',
+            'mode TEXT',
+            'origin TEXT',
+            'agent TEXT',
+            'userHTML TEXT',
+            'createdHTML TEXT',
+            'username TEXT',
         ],
     },
 

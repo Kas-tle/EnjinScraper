@@ -86,6 +86,9 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `forums`: Contains information about the forums scraped from the forum modules
 - `threads`: Contains information about the threads scraped from the forums
 - `posts`: Contains information about the posts scraped from the forums
+- `gallery_albums`: Contains information about albums in a gallery, including their titles, descriptions, and images
+- `gallery_images`: Contains information about images in a gallery, including their titles, descriptions, and associated albums
+- `gallery_tags`: Contains information about tags in a gallery, including their locations and associated images and albums
 - `wiki_pages`: Contains information about pages in a wiki, including their content, access control settings, and metadata
 - `wiki_revisions`: Contains information about revisions to pages in a wiki, including their content, access control settings, and metadata
 - `wiki_likes`: Contains information about users who have liked pages in a wiki
@@ -98,10 +101,12 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `application_sections`: Contains sections from applications
 - `application_questions`: Contains questions from applications
 - `application_questions`: Contains individual responses for applications
-- `comments`: Contains information about comments on applications and news articles
+- `comments`: Contains information about comments on applications, news articles, wiki pages, and gallery images
 - `users`: Contains information about users
 
-Any files hosted on Enjin's Amazon S3 instance (which includes attachments for applications, tickets, forum posts, and news posts) will be downloaded to `target/files`. Note that I still need to add support for downloading of certain non-S3 files, such as avatars and (for some odd reason) wiki uploads.
+Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance. The files will be stored in the `target/files` directory in the same directory as the `config.json` file. All information about these files will be stored in the `s3_files` table in the database. Examples of modules that store files here include galleries, forums, applications, tickets, and news posts.
+
+Files from wiki pages will be stored in the `wiki` directory. These do not have a directory structure, so they are simply in the parent folder of the wiki module's preset ID. For example, if the wiki module's preset ID is `123456`, the files will be stored in the `target/files/wiki/123456` directory.
 
 ## TODO
 

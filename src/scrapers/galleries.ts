@@ -5,7 +5,7 @@ import { insertRow, insertRows } from "../util/database";
 import { MessageType, statusMessage } from "../util/console";
 
 export async function getGalleries(domain: string, database: Database, sessionID: string) {
-    const albumsData = await enjinRequest<Gallery.GetAlbums>({session_id: sessionID, domain}, 'Gallery.getGalleries', domain);
+    const albumsData = await enjinRequest<Gallery.GetAlbums>({session_id: sessionID, domain}, 'Gallery.getAlbums', domain);
     
     if (albumsData.error) {
         statusMessage(MessageType.Error, `Error getting galleries: ${albumsData.error.message}`)
@@ -39,10 +39,10 @@ export async function getGalleries(domain: string, database: Database, sessionID
                 album.album.title,
                 album.album.description,
                 album.album.image_id,
-                album.album.totla_images,
+                album.album.total_images,
                 album.album.ordering
             ];
-            await insertRow(database, 'galleries_albums', ...albumRow)
+            await insertRow(database, 'gallery_albums', ...albumRow)
 
             const imageRows: GalleryImagesDB[] = [];
             for (const image of album.images) {
@@ -65,7 +65,7 @@ export async function getGalleries(domain: string, database: Database, sessionID
                     image.can_modify
                 ]);
             }
-            await insertRows(database, 'galleries_images', imageRows);
+            await insertRows(database, 'gallery_images', imageRows);
 
             const tagRows: GalleryTagsDB[] = [];
             for (const tag of album.tags) {
@@ -84,7 +84,7 @@ export async function getGalleries(domain: string, database: Database, sessionID
                     JSON.stringify(tag.taglist)
                 ]);
             }
-            await insertRows(database, 'galleries_tags', tagRows);
+            await insertRows(database, 'gallery_tags', tagRows);
         }
     }
 }

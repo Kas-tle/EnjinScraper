@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import { Database } from 'sqlite3';
 import { TicketReply, TicketUpload, Tickets } from '../interfaces/tickets';
-import { insertRow } from '../util/database';
+import { insertRow, insertRows } from '../util/database';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest, getRequest } from '../util/request';
@@ -14,9 +14,25 @@ async function getTicketModules(database: Database, domain: string, apiKey: stri
         api_key: apiKey,
     }
     const data = await enjinRequest<Tickets.GetModules>(params, 'Tickets.getModules', domain);
-    const userDB: [
+    const ticketModulesDB: [
         string, 
         string | null
+    ][] = [];
+    const ticketQuestionsDB: [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string | null,
+        string,
+        string | null,
+        string | null,
+        string | null,
+        string,
+        string
     ][] = [];
 
     if (data.error) {
@@ -27,15 +43,37 @@ async function getTicketModules(database: Database, domain: string, apiKey: stri
     if (Object.keys(data.result).length > 0) {
         Object.keys(data.result).forEach((module) => {
             const result = data.result[module]
-            userDB.push([
+            ticketModulesDB.push([
+                module,
                 result.module_name,
-                JSON.stringify(result.questions)
             ]);
+            for (const question of result.questions) {
+                ticketQuestionsDB.push([
+                    question.id,
+                    question.site_id,
+                    question.preset_id,
+                    question.type,
+                    question.label,
+                    question.required,
+                    question.bold,
+                    question.help_text ? question.help_text : null,
+                    question.order,
+                    question.other_options ? JSON.stringify(question.other_options) : null,
+                    question.options ? JSON.stringify(question.options) : null,
+                    question.conditions ? JSON.stringify(question.conditions) : null,
+                    question.condition_qualify,
+                    question.system,
+                ]);
+            }
         });
     }
 
-    if (userDB && userDB.length > 0) {
-        await insertRow(database, 'scrapers', 'ticket_modules', false);
+    if (ticketModulesDB && ticketModulesDB.length > 0) {
+        await insertRows(database, 'ticket_modules', ticketModulesDB);
+    }
+
+    if (ticketQuestionsDB && ticketQuestionsDB.length > 0) {
+        await insertRows(database, 'ticket_questions', ticketQuestionsDB);
     }
 
     return Object.keys(data.result);
@@ -137,13 +175,34 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                     ticket.priority_name,
                     ticket.replies_count,
                     ticket.private_reply_count,
-                    JSON.stringify(replies),
+                    replies.length > 0 ? true : false,
                     has_uploads,
                     null
                 ];
                 if (has_uploads) {
                     const uploads = await getTicketUploads(domain, siteAuth, ticket.code, ticket.preset_id);
                     values[values.length-1] = JSON.stringify(uploads);
+                }
+                if (replies.length > 0) {
+                    const repliesDB = [];
+                    for (const reply of replies) {
+                        repliesDB.push([
+                            reply.id,
+                            ticket.id,
+                            ticket.code,
+                            reply.preset_id,
+                            reply.sent,
+                            reply.text,
+                            reply.user_id,
+                            reply.mode,
+                            reply.origin,
+                            reply.agent,
+                            reply.userHTML,
+                            reply.createdHTML,
+                            reply.username,
+                        ]);
+                    }
+                    await insertRows(database, 'ticket_replies', repliesDB);
                 }
                 await insertRow(database, 'tickets', ...values);
                 statusMessage(MessageType.Process, `Scraping ticket ${ticket.id} [(${++ticketCount[0]}/${data.result.results.length}) (${page[0]}/${lastPage}) (${moduleCount[0]+1}/${totalModules})]`);
@@ -152,7 +211,7 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
             page[0]++;
         }
         page[0] = 1;
-        statusMessage(MessageType.Process, `Scraped all tickets for module ${modules[i]}. [(++${moduleCount[0]}/${totalModules})]`);
+        statusMessage(MessageType.Process, `Scraped all tickets for module ${modules[i]}. [(${++moduleCount[0]}/${totalModules})]`);
         tickets = 0;
     }
     removeExitListeners();

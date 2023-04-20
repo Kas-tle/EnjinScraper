@@ -14,6 +14,10 @@
       - [Forums](#forums-1)
       - [Threads](#threads)
       - [Posts](#posts)
+    + [Galleries](#galleries)
+      - [Gallery Albums](#gallery-albums)
+      - [Gallery Images](#gallery-images)
+      - [Gallery Tags](#gallery-tags)
     + [Wikis](#wikis)
       - [Wiki Pages](#wiki-pages)
       - [Wiki Revisions](#wiki-revisions)
@@ -286,6 +290,60 @@ These tables are used to store information about the forum modules that were scr
     - `user_posts`: The number of posts of the user who made the post (`TEXT`)
     - `url`: The URL of the post (`TEXT`)
 
+### Galleries
+
+These tables are used to hold information about scraped galleries and their respective albums and images.
+
+#### Gallery Albums
+
+- `gallery_albums`: Contains information about albums in a gallery, including their titles, descriptions, and images
+    - `album_id`: The ID of the album (`TEXT PRIMARY KEY`)
+    - `preset_id`: The ID of the gallery module preset (`TEXT`)
+    - `type`: The type of the album (`TEXT`)
+    - `game_id`: The ID of the game associated with the album (`TEXT`)
+    - `title`: The title of the album (`TEXT`)
+    - `description`: The description of the album (`TEXT`)
+    - `image_id`: The ID of the album cover image (`TEXT`)
+    - `total_images`: The total number of images in the album (`TEXT`)
+    - `ordering`: The ordering of the images in the album (`TEXT`)
+
+#### Gallery Images
+
+- `gallery_images`: Contains information about images in a gallery, including their titles, descriptions, and associated albums
+    - `image_id`: The ID of the image (`TEXT PRIMARY KEY`)
+    - `preset_id`: The ID of the gallery module preset (`TEXT`)
+    - `title`: The title of the image (`TEXT`)
+    - `description`: The description of the image (`TEXT`)
+    - `created`: The creation date of the image (`TEXT`)
+    - `user_id`: The ID of the user who uploaded the image (`TEXT`)
+    - `views`: The number of views of the image (`TEXT`)
+    - `album_id`: The ID of the album the image belongs to (`TEXT`)
+    - `have_original`: Whether or not the original image is available (`TEXT`)
+    - `ordering`: The ordering of the image within the album (`TEXT`)
+    - `number_comments`: The number of comments on the image (`TEXT`)
+    - `comment_cid`: The ID of the comment associated with the image (`TEXT`)
+    - `url`: The URL of the image (`TEXT`)
+    - `url_full`: The URL of the full-size image (`TEXT`)
+    - `url_original`: The URL of the original image (`TEXT`)
+    - `can_modify`: Whether or not the user can modify the image (`BOOLEAN`)
+
+#### Gallery Tags
+
+- `gallery_tags`: Contains information about tags in a gallery, including their locations and associated images and albums
+    - `gallery_tagid`: The ID of the tag (`TEXT PRIMARY KEY`)
+    - `album_id`: The ID of the album the tag belongs to (`TEXT`)
+    - `preset_id`: The ID of the gallery module preset (`TEXT`)
+    - `image_id`: The ID of the image the tag belongs to (`TEXT`)
+    - `user_id`: The ID of the user who added the tag (`TEXT`)
+    - `note`: The note associated with the tag (`TEXT`)
+    - `ordering`: The ordering of the tag within the image (`TEXT`)
+    - `px`: The X-coordinate of the tag location (`TEXT`)
+    - `py`: The Y-coordinate of the tag location (`TEXT`)
+    - `width`: The width of the tag (`TEXT`)
+    - `height`: The height of the tag (`TEXT`)
+    - `taglist`: A JSON object containing the list of tags (`JSON`)
+
+
 ### Wikis
 
 These tables are used to store information about the wikis scraped.
@@ -539,7 +597,7 @@ These tables are used to store information about the comments on applications an
 
 #### Comments
 
-- `comments`: Contains information about comments
+- `comments`: Contains information about comments on applications, news articles, wiki pages, and gallery images
     - `comment_cid`: The comment CID (`TEXT`)
     - `comment_id`: The comment ID (`TEXT PRIMARY KEY`)
     - `user_id`: The ID of the user who posted the comment (`TEXT`)
@@ -619,6 +677,9 @@ When `debug` is set to `true` in the config file, each request will be logged in
     - `getCategoriesAndForums`
     - `getForum`
     - `getThread`
+- `Gallery`
+    - `getAlbums`
+    - `getAlbum`
 - `News`
     - `getNews`
 - `Site`
@@ -627,16 +688,18 @@ When `debug` is set to `true` in the config file, each request will be logged in
     - `get`
 - `Tickets`
     - `getModules`
+    - `getReplies`
+    - `getTickets`
 - `Wiki`
     - `getPageList`
     - `getPageTitle`
     - `getPageHistory`
     - `getCategories`
     - `getFiles`
-    - `getReplies`
-    - `getTickets`
 - `User`
     - `login`
 - `UserAdmin`
     - `get`
     - `getUserTags`
+
+Some generic get and post requests will also be written. These are contained in folders named after their associated module.
