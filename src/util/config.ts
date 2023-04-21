@@ -29,6 +29,7 @@ interface Config {
         files?: boolean;
     };
     debug?: boolean;
+    disableSSL?: boolean;
 }
 
 const defaultConfig: Config = {
@@ -69,7 +70,8 @@ const defaultConfig: Config = {
         userips: false,
         files: false,
     },
-    debug: true
+    debug: true,
+    disableSSL: false
 };
 
 let cachedConfig: Config | null = null;

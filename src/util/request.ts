@@ -7,15 +7,22 @@ import { writeJsonFile } from "./files";
 import { MessageType, statusMessage } from "./console";
 
 let id = 0;
+let protocol: string;
 
-export async function enjinRequest<T>(params: Params, method: string, domain: string, inputHeaders: any={}): Promise<EnjinResponse<T>> {
+(async function () {
+    const config = await getConfig();
+    protocol = config.disableSSL ? 'http' : 'https';
+    statusMessage(MessageType.Info, `Using ${protocol} protocol`);
+})();
+
+export async function enjinRequest<T>(params: Params, method: string, domain: string, inputHeaders: any = {}): Promise<EnjinResponse<T>> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
         const qid = (++id).toString().padStart(7, '0');
         try {
             const { data, headers } = await axios.post<EnjinResponse<T>>(
-                `https://${domain}/api/v1/api.php`,
+                `${protocol}://${domain}/api/v1/api.php`,
                 {
                     jsonrpc: '2.0',
                     id: qid,
@@ -61,14 +68,14 @@ const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/201
 const rateLimiterMutex = new Mutex();
 let lastCallTime = 0;
 
-export async function getRequest(domain: string, url: string, headers: any, debugPath='', overrideDebug=false, responseType:ResponseType|undefined=undefined): Promise<AxiosResponse> {
+export async function getRequest(domain: string, url: string, headers: any, debugPath = '', overrideDebug = false, responseType: ResponseType | undefined = undefined): Promise<AxiosResponse> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
         const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.get(url, {
-                baseURL: `https://${domain}`,
+                baseURL: `${protocol}://${domain}`,
                 headers: {
                     'User-Agent': userAgent,
                     'Accept-Encoding': 'html',
@@ -78,7 +85,7 @@ export async function getRequest(domain: string, url: string, headers: any, debu
             });
 
             if (config.debug && !overrideDebug) {
-                writeJsonFile(`./target/debug/get${debugPath}/${rid}.json`, { 
+                writeJsonFile(`./target/debug/get${debugPath}/${rid}.json`, {
                     data: response.data,
                     status: response.status,
                     statusText: response.statusText,
@@ -111,7 +118,7 @@ export async function getRequest(domain: string, url: string, headers: any, debu
     return Promise.reject();
 }
 
-export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath='', overrideDebug=false, responseType=undefined): Promise<AxiosResponse> {
+export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath = '', overrideDebug = false, responseType = undefined): Promise<AxiosResponse> {
     await rateLimiterMutex.runExclusive(async () => {
         const currentTime = Date.now();
         const timeSinceLastCall = currentTime - lastCallTime;
@@ -127,14 +134,14 @@ export async function throttledGetRequest(domain: string, url: string, headers: 
     return getRequest(domain, url, headers, debugPath, overrideDebug, responseType);
 }
 
-export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath=''): Promise<AxiosResponse> {
+export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath = ''): Promise<AxiosResponse> {
     const config = await getConfig();
     let retries = 0;
     while (retries < 5) {
         const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.post(url, data, {
-                baseURL: `https://${domain}`,
+                baseURL: `${protocol}://${domain}`,
                 headers: {
                     'User-Agent': userAgent,
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -148,8 +155,8 @@ export async function postRequest(domain: string, url: string, data: any, header
             });
 
             if (config.debug) {
-                writeJsonFile(`./target/debug/post${debugPath}/${rid}.json`, { 
-                    data: response.data, 
+                writeJsonFile(`./target/debug/post${debugPath}/${rid}.json`, {
+                    data: response.data,
                     status: response.status,
                     statusText: response.statusText,
                     headers: response.headers,
@@ -181,7 +188,7 @@ export async function postRequest(domain: string, url: string, data: any, header
     return Promise.reject();
 }
 
-export async function throttledPostRequest(domain: string, url: string, data: any, headers: any, debugPath=''): Promise<AxiosResponse> {
+export async function throttledPostRequest(domain: string, url: string, data: any, headers: any, debugPath = ''): Promise<AxiosResponse> {
     await rateLimiterMutex.runExclusive(async () => {
         const currentTime = Date.now();
         const timeSinceLastCall = currentTime - lastCallTime;
