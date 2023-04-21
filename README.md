@@ -103,4 +103,3 @@ Files from wiki pages will be stored in the `wiki` directory. These do not have 
 ## TODO
 
 - [ ] Add more options for user data scraping (https://github.com/Kas-tle/EnjinScraper/issues/8)
-- [ ] Add support for scraping galleries (https://github.com/Kas-tle/EnjinScraper/issues/6)
