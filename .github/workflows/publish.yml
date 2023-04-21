@@ -4,6 +4,7 @@ on:
     push:
         paths:
             - "package.json"
+            - ".github/workflows/publish.yml"
 
 jobs:
     validate-version:
@@ -35,6 +36,8 @@ jobs:
                 exit 1
               fi
     publish:
+        permissions:
+            contents: write
         name: Publish to NPM
         needs: [validate-version]
         runs-on: ubuntu-latest
@@ -53,7 +56,6 @@ jobs:
               id: lookupPackageVersion
               run: echo "::set-output name=PACKAGE_VERSION::$(jq -r .version package.json)"
             - name: Bump version and push tag
-              id: tag_version
               uses: mathieudutour/github-tag-action@v6.1
               with:
                 github_token: ${{ secrets.GITHUB_TOKEN }}
