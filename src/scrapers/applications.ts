@@ -61,26 +61,39 @@ async function getApplicationIDs(domain: string, types: string[], sessionID: str
     return applicationIDs;
 }
 
-async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, applicationID: string): Promise<string | null> {
+async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, applicationID: string): Promise<{ comments_cid: string | null, admin_comments_cid: string | null }> {
     const applicationResonse = await getRequest(domain, `/ajax.php?s=dashboard_applications&cmd=app&app_id=${applicationID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/dashboard/applications/application?app_id=${applicationID}`
-    }, '/applications')
-
-    let commentCid = null;
+    });
 
     const $ = cheerio.load(applicationResonse.data);
-    const commentsPostContainer = $('.comments_post_container');
-    if (commentsPostContainer.length > 0) {
-        const dataUrl = commentsPostContainer.attr('data-url');
-        const cidMatch = dataUrl!.match(/cid=(\d+)/);
-        if (cidMatch && cidMatch[1]) {
-            commentCid = cidMatch[1];
-        }
-    }
+    const commentsBlockMain = $('.app_comments_block_main');
+    let comments_cid = null;
+    let admin_comments_cid = null;
 
-    statusMessage(MessageType.Plain, `Found comment cid ${commentCid} for application ${applicationID}`);
-    return commentCid;
+    commentsBlockMain.each((_index, element) => {
+        const dataType = $(element).attr('data-type');
+        const commentsInner = $(element).find('.comments_inner');
+
+        if (commentsInner.children().length > 0) {
+            const commentsPostContainer = $(element).find('.comments_post_container');
+            if (commentsPostContainer.length > 0) {
+                const dataUrl = commentsPostContainer.attr('data-url');
+                const cidMatch = dataUrl!.match(/cid=(\d+)/);
+                if (cidMatch && cidMatch[1]) {
+                    if (dataType === 'regular') {
+                        comments_cid = cidMatch[1];
+                    } else if (dataType === 'admin') {
+                        admin_comments_cid = cidMatch[1];
+                    }
+                }
+            }
+        }
+    });
+
+    statusMessage(MessageType.Plain, `Found comment cid ${comments_cid} and admin comment cid ${admin_comments_cid} for application ${applicationID}`);
+    return { comments_cid, admin_comments_cid };
 }
 
 async function getApplication(domain: string, siteAuth: SiteAuth, presetID: string): Promise<ApplicationContent | null> {
@@ -184,7 +197,7 @@ export async function getApplications(database: Database, domain: string, siteAu
 
     for (let i = 0; i < applications.length; i++) {
         const presetID = applications[i].preset_id;
-        statusMessage(MessageType.Process, `Gettting questions and sections for application ${presetID} [(${i+1}/${applications.length})]`);
+        statusMessage(MessageType.Process, `Gettting questions and sections for application ${presetID} [(${i + 1}/${applications.length})]`);
 
         const applicationConent = await getApplication(domain, siteAuth, presetID);
 
@@ -312,12 +325,14 @@ export async function getApplicationResponses(database: Database, domain: string
                 result.allow_app_comments,
                 result.post_app_comments,
                 result.allow_admin_comments,
+                null,
                 null
             ]
 
             if (result.comments > 0) {
                 const commentCid = await getApplicationCommentsCid(domain, siteAuth, result.application_id);
-                values[values.length - 1] = commentCid;
+                values[values.length - 2] = commentCid.comments_cid;
+                values[values.length - 1] = commentCid.admin_comments_cid;
             }
 
             await insertRow(

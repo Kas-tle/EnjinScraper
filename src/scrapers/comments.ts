@@ -10,10 +10,11 @@ import { MessageType, statusMessage } from '../util/console';
 export async function getComments(database: Database, domain: string, siteAuth: SiteAuth) {
     let commentCids: string[] = [];
     
-    commentCids.push(...await getTableCommentCids(database, 'news_articles'));
-    commentCids.push(...await getTableCommentCids(database, 'application_responses'));
-    commentCids.push(...await getTableCommentCids(database, 'wiki_pages'));
-    commentCids.push(...await getTableCommentCids(database, 'gallery_images'));
+    commentCids.push(...await getColumnCommentCids(database, 'news_articles'));
+    commentCids.push(...await getColumnCommentCids(database, 'application_responses'));
+    commentCids.push(...await getColumnCommentCids(database, 'application_responses', 'admin_comment_cid'));
+    commentCids.push(...await getColumnCommentCids(database, 'wiki_pages'));
+    commentCids.push(...await getColumnCommentCids(database, 'gallery_images'));
 
     statusMessage(MessageType.Info, `Found ${commentCids.length} comments to scrape`)
 
@@ -89,9 +90,9 @@ function flattenComments(comments: Comment[], commentsDB: CommentsDB[]) {
     }
 }
 
-async function getTableCommentCids(database: Database, table: string): Promise<string[]> {
+async function getColumnCommentCids(database: Database, table: string, coulumn='comment_cid'): Promise<string[]> {
     return new Promise((resolve, reject) => {
-        const query = `SELECT comment_cid FROM ${table} WHERE comment_cid IS NOT NULL`;
+        const query = `SELECT ${coulumn} FROM ${table} WHERE ${coulumn} IS NOT NULL`;
         database.all(query, (err, rows: { comment_cid: string; }[]) => {
             if (err) {
                 reject(err);

@@ -590,6 +590,7 @@ These tables are used to store information about the applications that were scra
     - `post_app_comments`: Whether or not app comments can be posted (`BOOLEAN`)
     - `allow_admin_comments`: Whether or not admin comments are allowed (`BOOLEAN`)
     - `comment_cid`: The comment container id for comments on the application (`TEXT`)
+    - `admin_comment_cid`: The comment container id for admin comments on the application (`TEXT`)
 
 ### Comments
 

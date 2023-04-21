@@ -530,6 +530,7 @@ export const tableSchemas: TableSchema[] = [
             'post_app_comments BOOLEAN',
             'allow_admin_comments BOOLEAN',
             'comment_cid TEXT',
+            'admin_comment_cid TEXT',
         ],
     },
     {
