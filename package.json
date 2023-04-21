@@ -3,7 +3,7 @@
     "version": "1.0.1",
     "description": "Scrapes an Enjin site via the Enjin API",
     "repository": "https://github.com/Kas-tle/EnjinScraper.git",
-    "author": "Joshua Castle <26531652+Kas-tle@users.noreply.github.com>",
+    "author": "Joshua Castle <packages@kastle.dev",
     "license": " AGPL-3.0-only",
     "scripts": {
         "build": "npx tsc"
