@@ -90,14 +90,14 @@ function flattenComments(comments: Comment[], commentsDB: CommentsDB[]) {
     }
 }
 
-async function getColumnCommentCids(database: Database, table: string, coulumn='comment_cid'): Promise<string[]> {
+async function getColumnCommentCids(database: Database, table: string, column='comment_cid'): Promise<string[]> {
     return new Promise((resolve, reject) => {
-        const query = `SELECT ${coulumn} FROM ${table} WHERE ${coulumn} IS NOT NULL`;
-        database.all(query, (err, rows: { comment_cid: string; }[]) => {
+        const query = `SELECT ${column} FROM ${table} WHERE ${column} IS NOT NULL`;
+        database.all(query, (err, rows: { [key: string]: string; }[]) => {
             if (err) {
                 reject(err);
             } else {
-                const commentCids = rows.map(row => row.comment_cid);
+                const commentCids = rows.map(row => row[column]);
                 resolve(commentCids);
             }
         });
