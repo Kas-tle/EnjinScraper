@@ -156,9 +156,9 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
 
         const threadsDB: ThreadsDB[] = [];
 
-        const { announcement_global, announcement_local, sticky, notices, threads } = data.result;
+        const { announcement_global, announcement_local, sticky, threads } = data.result;
 
-        const allThreads = [...announcement_global, ...announcement_local, ...sticky, ...notices, ...threads];
+        const allThreads = [...announcement_global, ...announcement_local, ...sticky, ...threads];
 
         for (const thread of allThreads) {
             threadIDs.push([forumID[0], forumID[1], thread.thread_id]);
@@ -221,8 +221,8 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
                     forum.unread_threads, 
                     JSON.stringify(data.result.announcement_global.map(thread => thread.thread_id)), 
                     JSON.stringify(data.result.announcement_local.map(thread => thread.thread_id)), 
-                    JSON.stringify(data.result.sticky.map(thread => thread.thread_id)), 
-                    JSON.stringify(data.result.notices.map(thread => thread.thread_id))
+                    JSON.stringify(data.result.sticky.map(thread => thread.thread_id)),
+                    JSON.stringify(data.result.notices),
                 ]
             )
         }

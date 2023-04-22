@@ -31,7 +31,7 @@ export namespace Forum {
         post_access: boolean;
         new_thread_access: boolean;
         minimum_posts_limitation: boolean;
-        notices: ThreadStats[];
+        notices: Notice;
     }
     export interface GetThread {
         thread: Thread;
@@ -204,6 +204,25 @@ export interface ThreadStats {
     moderation_access: boolean;
     post_access: boolean;
     new_thread_access: boolean;
+}
+
+export interface Notice {
+    notice_id: string;
+    preset_id: string;
+    name: string;
+    description: string;
+    show: string;
+    expires: string;
+    show_days: string;
+    expire_days: string;
+    expire_date: string;
+    page_location: string;
+    user_id: string;
+    viewed: string;
+    deleted: string;
+    notice: string;
+    total: number;
+    page: number;
 }
 
 export interface Thread {
