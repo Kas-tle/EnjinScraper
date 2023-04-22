@@ -31,8 +31,10 @@ export namespace Forum {
         post_access: boolean;
         new_thread_access: boolean;
         minimum_posts_limitation: boolean;
-        notices: Notice;
+        notices: Notice | [];
     }
+
+    export interface GetNotices extends Array<NoticeEntry> {};
     export interface GetThread {
         thread: Thread;
         posts: Post[];
@@ -223,6 +225,19 @@ export interface Notice {
     notice: string;
     total: number;
     page: number;
+}
+
+export interface NoticeEntry {
+    notice_id: string;
+    preset_id: string;
+    name: string;
+    description: string;
+    show: string;
+    expires: string;
+    show_days: string;
+    expire_days: string;
+    expire_date: string;
+    page_location: string;
 }
 
 export interface Thread {

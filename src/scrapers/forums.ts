@@ -1,5 +1,5 @@
 import { Database } from 'sqlite3';
-import { Forum, ForumStats, ForumsDB, PostsDB, ThreadPosts, ThreadsDB } from '../interfaces/forum';
+import { Forum, ForumStats, ForumsDB, Notice, NoticeEntry, PostsDB, ThreadPosts, ThreadsDB } from '../interfaces/forum';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
@@ -203,6 +203,14 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
 
         if (page === 1) {
             const { forum } = data.result;
+
+            let notices: Notice | [] | NoticeEntry[] = data.result.notices;
+
+            if (typeof data.result.notices === 'object' && !Array.isArray(data.result.notices)) {
+                const noticesData = await enjinRequest<Forum.GetNotices>({ preset_id: forum.preset_id, session_id: sessionID }, 'Forum.getNotices', domain);
+                notices = noticesData.result;
+            }
+
             await updateRow(
                 database,
                 'forums',
@@ -222,7 +230,7 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
                     JSON.stringify(data.result.announcement_global.map(thread => thread.thread_id)), 
                     JSON.stringify(data.result.announcement_local.map(thread => thread.thread_id)), 
                     JSON.stringify(data.result.sticky.map(thread => thread.thread_id)),
-                    JSON.stringify(data.result.notices),
+                    JSON.stringify(notices),
                 ]
             )
         }
