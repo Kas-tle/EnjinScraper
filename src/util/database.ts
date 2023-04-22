@@ -128,6 +128,10 @@ export async function updateRow(database: Database, table: string, whereKey: str
 
 export async function insertRows(database: Database, table: string, rows: (string | number | boolean | null)[][]): Promise<void> {
     return new Promise((resolve, reject) => {
+        if ( !rows.length ) {
+            statusMessage(MessageType.Plain, `Ignoring insertion of 0 rows into table '${table}'`);
+            resolve();
+        }
         const values = new Array(rows[0].length).fill('?').join(', ');
         const sql = `INSERT OR REPLACE INTO ${table} VALUES (${values})`;
 
