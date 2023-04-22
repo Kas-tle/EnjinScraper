@@ -41,6 +41,7 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "password": "somepassword", // Required
     "disabledModules": {
         "forums": false,
+        "galleries": false,
         "news": false,
         "wikis": false,
         "tickets": false,
@@ -50,7 +51,8 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
         "usertags": false,
         "files": false
     },
-    "debug": false
+    "debug": false,
+    "disableSSL": false
 }
 ```
 
