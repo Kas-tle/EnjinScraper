@@ -305,7 +305,7 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
                     post.post_admin_hidden,
                     post.post_locked,
                     post.last_edit_user,
-                    JSON.stringify(post.votes),
+                    post.votes ? JSON.stringify(post.votes) : null,
                     post.post_username,
                     post.avatar,
                     post.user_online,

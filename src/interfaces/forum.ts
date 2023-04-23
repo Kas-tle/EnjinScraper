@@ -328,7 +328,7 @@ export interface ThreadsDB extends Array<ThreadTuple[number]> {}
 
 type PostTuple = [
     string, string, string, string, string, string, string, string, string, string,
-    string, string, string, string, string, string, boolean, string, string, string
+    string, string, string, string|null, string, string, boolean, string, string, string
 ]
 
 export interface PostsDB extends Array<PostTuple[number]> {}
