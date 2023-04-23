@@ -98,13 +98,34 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `news_articles`: Contains information about news articles scraped from the news modules
 - `ticket_modules`: Contains information about ticket modules
 - `tickets`: Contains information about tickets scraped from the ticket modules
+- `ticket_replies`: Contains information about replies made to support tickets
 - `applications`: Contains basic information about applications
 - `application_sections`: Contains sections from applications
 - `application_questions`: Contains questions from applications
 - `application_questions`: Contains individual responses for applications
 - `comments`: Contains information about comments on applications, news articles, wiki pages, and gallery images
 - `users`: Contains information about users
+- `user_profiles`: Contains information about user profiles, including their personal information, gaming IDs, and social media handles
+- `user_games`: Contains information about the games that a user has added to their profile
+- `user_characters`: Contains information about the characters that a user has added to their profile
+- `user_albums`: Contains information about the albums that a user has created
+- `user_images`: Contains information about the images that a user has uploaded
+- `user_wall_posts`: Contains information about wall posts made by users
+- `user_wall_comments`: Contains information about comments made on wall posts by users
+- `user_wall_comment_likes`: Contains information about users who have liked comments on wall posts
+- `user_wall_post_likes`: Contains information about users who have liked wall posts
 
-Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance. The files will be stored in the `target/files` directory in the same directory as the `config.json` file. All information about these files will be stored in the `s3_files` table in the database. Examples of modules that store files here include galleries, forums, applications, tickets, and news posts.
 
-Files from wiki pages will be stored in the `wiki` directory. These do not have a directory structure, so they are simply in the parent folder of the wiki module's preset ID. For example, if the wiki module's preset ID is `123456`, the files will be stored in the `target/files/wiki/123456` directory.
+All files scraped will be stored in the `target/files` directory in the same directory as the `config.json` file. The directory structure will simply follow the URL with the `https://` header removed. For example, if the site is `https://www.example.com/somdir/file.png`, the files will be stored in the `target/files/www.example.com/somdir/file.png` directory.
+
+Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance.  All information about these files will be stored in the `s3_files` table in the database. Examples of modules that store files here include galleries, forums, applications, tickets, and news posts.
+
+Files from wiki pages will generally be found under `target/files/s3.amazonaws.com/files.enjin.com/${siteID}/modules/wiki/${wikiPresetID}/file.png`.
+
+User avatars are also scraped, which combines the URLs found in `user_profiles.avatar`, `user_wall_comments.avatar`, and `user_wall_post_likes.avatar`. These will generally be found under `assets-cloud.enjin.com/users/${userID}/avatar/full.${fileID}.png`. Note that these files are generally stored in the database with the size medium, but we download the full size only instead.
+
+Profile cover images come from `user_profiles.cover_image` and are found in either `https://assets-cloud.enjin.com/users/${userID}/cover/${fileID}.png` if the user has uploaded their own cover image, or `resources.enjin.com/${resourceLocator}/themes/${version}/image/profile/cover/${category}/${fileName}.jpg` if the user is using an Enjin provided cover image.
+
+Game boxes are the images displayed for games a user has on their profile. They are found in `assets-cloud.enjin.com/gameboxes/${gameID}/boxlarge.jpg`. Note that `boxmedium` is the original value in the table, but we replace with `boxlarge` to get the full size image.
+
+Lastly, user album images from `user_images.url_original` can be found in either `s3.amazonaws.com/assets.enjin.com/users/${userID}/pics/original/${fileName}` or `assets.enjin.com/wall_embed_images/${fileName}`.

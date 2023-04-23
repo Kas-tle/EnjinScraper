@@ -29,6 +29,7 @@
     + [Tickets](#tickets)
       - [Ticket Modules](#ticket-modules)
       - [Tickets](#tickets-1)
+      - [Ticket Replies](#ticket-replies)
     + [Applications](#applications)
       - [Applications](#applications-1)
       - [Applications Sections](#applications-sections)
@@ -51,6 +52,8 @@
       - [S3 Files](#s3-files)
   * [Files](#files-1)
   * [Debug](#debug)
+      - [Enjin API](#enjin-api)
+      - [Generic Requests](#generic-requests)
 
 ## Database Tables
 
@@ -523,8 +526,25 @@ These tables are used to store information about the ticket modules that were sc
     - `priority_name`: The name of the priority of the ticket (`TEXT`)
     - `replies_count`: The number of replies to the ticket (`INTEGER`)
     - `private_reply_count`: The number of private replies to the ticket (`INTEGER`)
-    - `replies`: The replies to the ticket (`JSON`)
+    - `has_replies`: If the ticket has replies (`BOOLEAN`)
     - `has_uploads`: Whether or not the ticket has uploads (`BOOLEAN`)
+
+#### Ticket Replies
+
+- `ticket_replies`: Contains information about replies made to support tickets
+    - `id`: The ID of the ticket reply (`TEXT PRIMARY KEY`)
+    - `ticket_id`: The ID of the support ticket that the reply was made on (`TEXT`)
+    - `ticket_code`: The code of the support ticket that the reply was made on (`TEXT`)
+    - `preset_id`: The preset ID of the support ticket that the reply was made on (`TEXT`)
+    - `sent`: The time that the ticket reply was sent (`TEXT`)
+    - `text`: The content of the ticket reply (`TEXT`)
+    - `user_id`: The ID of the user who made the ticket reply (`TEXT`)
+    - `mode`: The mode of the support ticket (`TEXT`)
+    - `origin`: The origin of the support ticket (`TEXT`)
+    - `agent`: The agent who handled the support ticket (`TEXT`)
+    - `userHTML`: The HTML representation of the user's content (`TEXT`)
+    - `createdHTML`: The HTML representation of the creation time (`TEXT`)
+    - `username`: The username of the user who made the ticket reply (`TEXT`)
 
 ### Applications
 
@@ -870,11 +890,23 @@ These tables are used to store information about the files that were scraped.
 
 ## Files
 
-Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance. The files will be stored in the `target/files` directory in the same directory as the `config.json` file. All information about these files will be stored in the `s3_files` table in the database.
+All files scraped will be stored in the `target/files` directory in the same directory as the `config.json` file. The directory structure will simply follow the URL with the `https://` header removed. For example, if the site is `https://www.example.com/somdir/file.png`, the files will be stored in the `target/files/www.example.com/somdir/file.png` directory.
 
-Files from wiki pages will be stored in the `wiki` directory. These do not have a directory structure, so they are simply in the parent folder of the wiki module's preset ID. For example, if the wiki module's preset ID is `123456`, the files will be stored in the `target/files/wiki/123456` directory.
+Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance.  All information about these files will be stored in the `s3_files` table in the database. Examples of modules that store files here include galleries, forums, applications, tickets, and news posts.
+
+Files from wiki pages will generally be found under `target/files/s3.amazonaws.com/files.enjin.com/${siteID}/modules/wiki/${wikiPresetID}/file.png`.
+
+User avatars are also scraped, which combines the URLs found in `user_profiles.avatar`, `user_wall_comments.avatar`, and `user_wall_post_likes.avatar`. These will generally be found under `assets-cloud.enjin.com/users/${userID}/avatar/full.${fileID}.png`. Note that these files are generally stored in the database with the size medium, but we download the full size only instead.
+
+Profile cover images come from `user_profiles.cover_image` and are found in either `https://assets-cloud.enjin.com/users/${userID}/cover/${fileID}.png` if the user has uploaded their own cover image, or `resources.enjin.com/${resourceLocator}/themes/${version}/image/profile/cover/${category}/${fileName}.jpg` if the user is using an Enjin provided cover image.
+
+Game boxes are the images displayed for games a user has on their profile. They are found in `assets-cloud.enjin.com/gameboxes/${gameID}/boxlarge.jpg`. Note that `boxmedium` is the original value in the table, but we replace with `boxlarge` to get the full size image.
+
+Lastly, user album images from `user_images.url_original` can be found in either `s3.amazonaws.com/assets.enjin.com/users/${userID}/pics/original/${fileName}` or `assets.enjin.com/wall_embed_images/${fileName}`.
 
 ## Debug
+
+### Enjin API
 
 When `debug` is set to `true` in the config file, each request will be logged in `target/debug`. Requests are seperated by request type as documented in the Enjin API docs. The following endpoints logged:
 
@@ -885,12 +917,19 @@ When `debug` is set to `true` in the config file, each request will be logged in
 - `Forum`
     - `getCategoriesAndForums`
     - `getForum`
+    - `getNotices`
     - `getThread`
 - `Gallery`
     - `getAlbums`
     - `getAlbum`
 - `News`
     - `getNews`
+- `Profile`
+    - `getCharacters`
+    - `getFullInfo`
+    - `getGames`
+    - `getPhotos`
+    - `getWall`
 - `Site`
     - `getStats`
 - `Tags`
@@ -911,4 +950,21 @@ When `debug` is set to `true` in the config file, each request will be logged in
     - `get`
     - `getUserTags`
 
-Some generic get and post requests will also be written. These are contained in folders named after their associated module.
+### Generic Requests
+
+Some generic get and post requests will also be written. These are contained in folders named after the function in which they are called, and if multiple, their assigned variable:
+- `get`
+    - `authenticateSite`
+        - `homeResponse`
+        - `loginResponse`
+    - `fetchSiteDataObject`
+    - `getAdditionalUserData`
+    - `getApplication`
+    - `getApplicationCommentsCid`
+    - `getComments`
+    - `getNewsCommentsCid`
+    - `getTicketUploads`
+- `post`
+    - `authenticateSite`
+    - `getDirectoryListing`
+    - `getFiles`

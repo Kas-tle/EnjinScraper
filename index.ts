@@ -12,7 +12,7 @@ import { getApplicationResponses, getApplications } from './src/scrapers/applica
 import { getAdditionalUserData, getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
 import { getSiteData } from './src/scrapers/sitedata';
-import { getFiles } from './src/scrapers/files';
+import { getAvatarFiles, getGameBoxFiles, getProfileCoverFiles, getS3Files, getUserAlbumFiles, getWikiFiles } from './src/scrapers/files';
 import { getWikis } from './src/scrapers/wiki';
 import { getGalleries } from './src/scrapers/galleries';
 import { MessageType, statusMessage } from './src/util/console';
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Info, 'Scraping users...');
         await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, sessionID, siteAuth, config.apiKey, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'users', true);
-        await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
+        await isModuleScraped(database, 'user_data') ? {} : getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'user_data', true);
         deleteFiles(['./target/recovery/user_tags.json', './target/recovery/user_data.json']);
         statusMessage(MessageType.Completion, 'Finished user scraping');
@@ -173,13 +173,37 @@ async function main(): Promise<void> {
     // Get files
     if (config.disabledModules?.files) {
         statusMessage(MessageType.Critical, 'Files module disabled, skipping file scraping...');
-    } else if (await isModuleScraped(database, 'files')) {
+    } else if (
+        await isModuleScraped(database, 's3_files') && 
+        await isModuleScraped(database, 'wiki_files') &&
+        await isModuleScraped(database, 'avatar_files') &&
+        await isModuleScraped(database, 'profile_cover_files') &&
+        await isModuleScraped(database, 'game_box_files') &&
+        await isModuleScraped(database, 'user_album_files')
+    ) {
         statusMessage(MessageType.Critical, 'Files already scraped, skipping file scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping files...');
-        await getFiles(config.domain, database, siteAuth, siteID);
-        await insertRow(database, 'scrapers', 'files', true);
-        deleteFiles(['./target/recovery/s3_file_progress.json', './target/recovery/wiki_file_progress.json']);
+        await isModuleScraped(database, 's3_files') ? {} : await getS3Files(config.domain, database, siteAuth, siteID);
+        await insertRow(database, 'scrapers', 's3_files', true);
+        await isModuleScraped(database, 'wiki_files') ? {} :await getWikiFiles(database);
+        await insertRow(database, 'scrapers', 'wiki_files', true);
+        await isModuleScraped(database, 'avatar_files') ? {} :await getAvatarFiles(database, siteID);
+        await insertRow(database, 'scrapers', 'avatar_files', true);
+        await isModuleScraped(database, 'profile_cover_files') ? {} :await getProfileCoverFiles(database);
+        await insertRow(database, 'scrapers', 'profile_cover_files', true);
+        await isModuleScraped(database, 'game_box_files') ? {} :await getGameBoxFiles(database);
+        await insertRow(database, 'scrapers', 'game_box_files', true);
+        await isModuleScraped(database, 'user_album_files') ? {} :await getUserAlbumFiles(database);
+        await insertRow(database, 'scrapers', 'user_album_files', true);
+        deleteFiles([
+            './target/recovery/s3_file_progress.json', 
+            './target/recovery/wiki_file_progress.json',
+            './target/recovery/avatar_file_progress.json',
+            './target/recovery/cover_file_progress.json',
+            './target/recovery/game_box_progress.json',
+            './target/recovery/user_album_progress.json'
+        ]);
         statusMessage(MessageType.Completion, 'Finished file scraping');
     }
 

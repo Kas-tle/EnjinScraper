@@ -66,9 +66,9 @@ async function getS3FileUrls(domain: string, siteAuth: SiteAuth, token: string, 
 async function downloadS3Files(database: Database, targetPath: string) {
     let fileCount = [0];
 
-    let files: [{filename: string, url: string, dirPath: string}] = await new Promise((resolve, reject) => {
+    let files: [{ filename: string, url: string, dirPath: string }] = await new Promise((resolve, reject) => {
         database.all('SELECT filename, url, dirPath FROM s3_files',
-            (err, rows: [{filename: string, url: string, dirPath: string}]) => {
+            (err, rows: [{ filename: string, url: string, dirPath: string }]) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -77,13 +77,13 @@ async function downloadS3Files(database: Database, targetPath: string) {
             });
     });
 
-    if(fileExists('./target/recovery/s3_file_progress.json')) {
+    if (fileExists('./target/recovery/s3_file_progress.json')) {
         statusMessage(MessageType.Info, 'Recovering s3 file download progress previous session...')
         const progress = parseJsonFile('./target/recovery/s3_file_progress.json') as [number[]];
         fileCount = progress[0];
     }
 
-    addExitListeners(['./target/recovery/s3_file_progress.json'],[[fileCount]])
+    addExitListeners(['./target/recovery/s3_file_progress.json'], [[fileCount]])
 
     const totalFiles = files.length;
 
@@ -91,11 +91,11 @@ async function downloadS3Files(database: Database, targetPath: string) {
         try {
             const file = files[i];
             const response = await getRequest('', file.url, {}, '', true, 'arraybuffer');
-    
-            const filePath = path.join(targetPath, file.dirPath, file.filename);
+
+            const filePath = path.join(targetPath, file.url.replace(/^https?:\/\//i, ""));
             const fileDirectory = path.dirname(filePath);
             await fs.mkdir(fileDirectory, { recursive: true });
-    
+
             await fs.writeFile(filePath, response.data, { encoding: null });
             statusMessage(MessageType.Process, `Downloaded ${file.url} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
         } catch (error) {
@@ -103,14 +103,46 @@ async function downloadS3Files(database: Database, targetPath: string) {
             statusMessage(MessageType.Error, `Skipping file ${files[i].url} [(${++fileCount[0]}/${totalFiles})]`)
         }
     }
+
+    statusMessage(MessageType.Completion, 'Finished getting s3 files')
+
+    removeExitListeners();
 }
 
-async function downloadWikiFiles(database: Database, targetPath: string) {
+export async function getS3Files(domain: string, database: Database, siteAuth: SiteAuth, siteID: string) {
+    if (!fileExists('./target/recovery/s3_file_progress.json')) {
+        const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
+            Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+            Origin: `https://${domain}`,
+            Referer: `https://${domain}/admin/files`,
+        }, '/getFiles')
+        const token = tokenResponse.data.token;
+
+        const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
+        const s3FilesDB: S3FilesDB[] = [];
+        for (const file of s3FileUrls) {
+            s3FilesDB.push([
+                file.filename,
+                file.url,
+                file.dirPath,
+            ]);
+        }
+        await insertRows(database, 's3_files', s3FilesDB);
+    }
+
+    statusMessage(MessageType.Info, 'Getting s3 files...')
+    const filePath = path.join(process.cwd(), './target/files');
+    await downloadS3Files(database, filePath);
+}
+
+export async function getWikiFiles(database: Database) {
+    statusMessage(MessageType.Info, 'Getting wiki files...');
+
     let fileCount = [0];
 
-    let wikiFiles: [{preset_id: string, path: string, name: string}] = await new Promise((resolve, reject) => {
+    let wikiFiles: [{ preset_id: string, path: string, name: string }] = await new Promise((resolve, reject) => {
         database.all('SELECT preset_id, path, name FROM wiki_uploads',
-            (err, rows: [{preset_id: string, path: string, name: string}]) => {
+            (err, rows: [{ preset_id: string, path: string, name: string }]) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -119,13 +151,13 @@ async function downloadWikiFiles(database: Database, targetPath: string) {
             });
     });
 
-    if(fileExists('./target/recovery/wiki_file_progress.json')) {
+    if (fileExists('./target/recovery/wiki_file_progress.json')) {
         statusMessage(MessageType.Info, 'Recovering wiki file download progress previous session...')
         const progress = parseJsonFile('./target/recovery/wiki_file_progress.json') as [number[]];
         fileCount = progress[0];
     }
 
-    addExitListeners(['./target/recovery/wiki_file_progress.json'],[[fileCount]])
+    addExitListeners(['./target/recovery/wiki_file_progress.json'], [[fileCount]])
 
     const totalFiles = wikiFiles.length;
 
@@ -140,11 +172,11 @@ async function downloadWikiFiles(database: Database, targetPath: string) {
                 const response = await getRequest('', file.path, {
                     Cookie: cfbmToken,
                 }, '', true, 'arraybuffer');
-    
-                const filePath = path.join(targetPath, file.preset_id, file.name);
+
+                const filePath = path.join(process.cwd(), './target/files', file.path.replace(/^https?:\/\//i, ""));
                 const fileDirectory = path.dirname(filePath);
                 await fs.mkdir(fileDirectory, { recursive: true });
-    
+
                 await fs.writeFile(filePath, response.data, { encoding: null });
                 statusMessage(MessageType.Process, `Downloaded ${file.path} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
             } catch (error) {
@@ -152,43 +184,235 @@ async function downloadWikiFiles(database: Database, targetPath: string) {
                 statusMessage(MessageType.Error, `Skipping file ${wikiFiles[i].path} [(${++fileCount[0]}/${totalFiles})]`)
             }
         }
+        statusMessage(MessageType.Completion, 'Finished getting wiki files')
     } else {
         statusMessage(MessageType.Critical, 'No wiki files found')
     }
+
+    removeExitListeners();
 }
 
-export async function getFiles(domain: string, database: Database, siteAuth: SiteAuth, siteID: string) {
-    const s3Exists = fileExists('./target/recovery/s3_file_progress.json');
-    const wikiExists = fileExists('./target/recovery/wiki_file_progress.json');
-    if (!s3Exists && !wikiExists) {
-        const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
-            Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-            Origin: `https://${domain}`,
-            Referer: `https://${domain}/admin/files`,
-        }, '/getFiles')
-        const token = tokenResponse.data.token;
-        
-        const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
-        const s3FilesDB: S3FilesDB[] = [];
-        for (const file of s3FileUrls) {
-            s3FilesDB.push([
-                file.filename,
-                file.url,
-                file.dirPath,
-            ]);
+async function getColumnURLs(database: Database, column: string, table: string): Promise<string[]> {
+    const URLs: string[] = await new Promise((resolve, reject) => {
+        database.all(`SELECT ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
+            (err, rows: [{ [column: string]: string }]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const URLValues = rows.map(row => row[column]);
+                    resolve(URLValues);
+                }
+            });
+    });
+    return URLs;
+}
+
+export async function getAvatarFiles(database: Database, siteID: string) {
+    statusMessage(MessageType.Info, 'Getting avatar files...');
+
+    let fileCount = [0];
+
+    const preAvatarURLs = [
+        ...await getColumnURLs(database, 'avatar', 'user_profiles'),
+        ...await getColumnURLs(database, 'avatar', 'user_wall_comments'),
+        ...await getColumnURLs(database, 'avatar', 'user_wall_post_likes'),
+    ].filter((value, index, array) => array.indexOf(value) === index);
+
+    const avatarURLs: string[] = preAvatarURLs.filter(url => {
+        return !url.startsWith(`https://s3.amazonaws.com/files.enjin.com/${siteID}/`) &&
+        !url.startsWith("https://cravatar.eu/");
+    }).map(url => {
+        return url.replace("/medium.", "/full.");
+    });
+
+    if (fileExists('./target/recovery/avatar_file_progress.json')) {
+        statusMessage(MessageType.Info, 'Recovering avatar file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/avatar_file_progress.json') as [number[]];
+        fileCount = progress[0];
+    }
+
+    addExitListeners(['./target/recovery/avatar_file_progress.json'], [[fileCount]])
+
+    const totalFiles = avatarURLs.length;
+
+    if (totalFiles > 0) {
+        const cfbmTokenResponse = await getRequest('', avatarURLs[0], {}, '', true, 'arraybuffer');
+        const setCookie = cfbmTokenResponse.headers['set-cookie'];
+        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+
+        for (let i = fileCount[0]; i < totalFiles; i++) {
+            try {
+                const file = avatarURLs[i];
+                const response = await getRequest('', file, {
+                    Cookie: cfbmToken,
+                }, '', true, 'arraybuffer');
+
+                const filePath = path.join(process.cwd(), './target/files', file.replace(/^https?:\/\//i, ""));
+                const fileDirectory = path.dirname(filePath);
+                await fs.mkdir(fileDirectory, { recursive: true });
+
+                await fs.writeFile(filePath, response.data, { encoding: null });
+                statusMessage(MessageType.Process, `Downloaded ${file} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
+            } catch (error) {
+                statusMessage(MessageType.Error, `Error downloading ${avatarURLs[i]}: ${getErrorMessage(error)}`)
+                statusMessage(MessageType.Error, `Skipping file ${avatarURLs[i]} [(${++fileCount[0]}/${totalFiles})]`)
+            }
         }
-        await insertRows(database, 's3_files', s3FilesDB);
+        statusMessage(MessageType.Completion, 'Finished getting avatar files')
+    } else {
+        statusMessage(MessageType.Critical, 'No avatar files found')
     }
 
-    if (!wikiExists) {
-        statusMessage(MessageType.Info, 'Getting s3 files...')
-        const filePath = path.join(process.cwd(), './target/files');
-        await downloadS3Files(database, filePath);
+    removeExitListeners();
+}
+
+export async function getProfileCoverFiles(database: Database) {
+    statusMessage(MessageType.Info, 'Getting profile cover files...');
+
+    let fileCount = [0];
+
+    const profileURLs = (await getColumnURLs(database, 'cover_image', 'user_profiles'))
+        .filter((value, index, array) => array.indexOf(value) === index);
+
+    if (fileExists('./target/recovery/cover_file_progress.json')) {
+        statusMessage(MessageType.Info, 'Recovering profile cover file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/cover_file_progress.json') as [number[]];
+        fileCount = progress[0];
     }
 
-    statusMessage(MessageType.Info, 'Getting wiki files...')
-    const wikiFilePath = path.join(process.cwd(), './target/files/wiki');
-    await downloadWikiFiles(database, wikiFilePath);
+    addExitListeners(['./target/recovery/cover_file_progress.json'], [[fileCount]])
+
+    const totalFiles = profileURLs.length;
+
+    if (totalFiles > 0) {
+        const cfbmTokenResponse = await getRequest('', profileURLs[0], {}, '', true, 'arraybuffer');
+        const setCookie = cfbmTokenResponse.headers['set-cookie'];
+        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+
+        for (let i = fileCount[0]; i < totalFiles; i++) {
+            try {
+                const file = profileURLs[i];
+                const response = await getRequest('', file, {
+                    Cookie: cfbmToken,
+                }, '', true, 'arraybuffer');
+
+                const filePath = path.join(process.cwd(), './target/files', file.replace(/^https?:\/\//i, ""));
+                const fileDirectory = path.dirname(filePath);
+                await fs.mkdir(fileDirectory, { recursive: true });
+
+                await fs.writeFile(filePath, response.data, { encoding: null });
+                statusMessage(MessageType.Process, `Downloaded ${file} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
+            } catch (error) {
+                statusMessage(MessageType.Error, `Error downloading ${profileURLs[i]}: ${getErrorMessage(error)}`)
+                statusMessage(MessageType.Error, `Skipping file ${profileURLs[i]} [(${++fileCount[0]}/${totalFiles})]`)
+            }
+        }
+        statusMessage(MessageType.Completion, 'Finished profile cover files')
+    } else {
+        statusMessage(MessageType.Critical, 'No profile cover files found')
+    }
+
+    removeExitListeners();
+}
+
+export async function getGameBoxFiles(database: Database) {
+    statusMessage(MessageType.Info, 'Getting game box files...');
+
+    let fileCount = [0];
+
+    const preGameBoxURLs = (await getColumnURLs(database, 'avatar', 'user_games'))
+        .filter((value, index, array) => array.indexOf(value) === index);
+
+    const gameBoxURLs = preGameBoxURLs.map(url => {
+        return url.replace("/boxmedium.jpg.", "/large.jpg");
+    });
+
+    if (fileExists('./target/recovery/game_box_progress.json')) {
+        statusMessage(MessageType.Info, 'Recovering game box file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/game_box_progress.json') as [number[]];
+        fileCount = progress[0];
+    }
+
+    addExitListeners(['./target/recovery/game_box_progress.json'], [[fileCount]])
+
+    const totalFiles = gameBoxURLs.length;
+
+    if (totalFiles > 0) {
+        const cfbmTokenResponse = await getRequest('', gameBoxURLs[0], {}, '', true, 'arraybuffer');
+        const setCookie = cfbmTokenResponse.headers['set-cookie'];
+        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+
+        for (let i = fileCount[0]; i < totalFiles; i++) {
+            try {
+                const file = gameBoxURLs[i];
+                const response = await getRequest('', file, {
+                    Cookie: cfbmToken,
+                }, '', true, 'arraybuffer');
+
+                const filePath = path.join(process.cwd(), './target/files', file.replace(/^https?:\/\//i, ""));
+                const fileDirectory = path.dirname(filePath);
+                await fs.mkdir(fileDirectory, { recursive: true });
+
+                await fs.writeFile(filePath, response.data, { encoding: null });
+                statusMessage(MessageType.Process, `Downloaded ${file} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
+            } catch (error) {
+                statusMessage(MessageType.Error, `Error downloading ${gameBoxURLs[i]}: ${getErrorMessage(error)}`)
+                statusMessage(MessageType.Error, `Skipping file ${gameBoxURLs[i]} [(${++fileCount[0]}/${totalFiles})]`)
+            }
+        }
+        statusMessage(MessageType.Completion, 'Finished getting game box files')
+    } else {
+        statusMessage(MessageType.Critical, 'No game box cover files found')
+    }
+
+    removeExitListeners();
+}
+
+export async function getUserAlbumFiles(database: Database) {
+    statusMessage(MessageType.Info, 'Getting user album files...');
+
+    let fileCount = [0];
+
+    const userAlbumURLs = (await getColumnURLs(database, 'url_original', 'user_images'))
+        .filter((value, index, array) => array.indexOf(value) === index);
+
+    if (fileExists('./target/recovery/user_album_progress.json')) {
+        statusMessage(MessageType.Info, 'Recovering user album file download progress previous session...')
+        const progress = parseJsonFile('./target/recovery/user_album_progress.json') as [number[]];
+        fileCount = progress[0];
+    }
+
+    addExitListeners(['./target/recovery/user_album_progress.json'], [[fileCount]])
+
+    const totalFiles = userAlbumURLs.length;
+
+    if (totalFiles > 0) {
+        const cfbmTokenResponse = await getRequest('', userAlbumURLs[0], {}, '', true, 'arraybuffer');
+        const setCookie = cfbmTokenResponse.headers['set-cookie'];
+        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+
+        for (let i = fileCount[0]; i < totalFiles; i++) {
+            try {
+                const file = userAlbumURLs[i];
+                const response = await getRequest('', file, {
+                    Cookie: cfbmToken,
+                }, '', true, 'arraybuffer');
+
+                const filePath = path.join(process.cwd(), './target/files', file);
+                const fileDirectory = path.dirname(filePath);
+                await fs.mkdir(fileDirectory, { recursive: true });
+
+                await fs.writeFile(filePath, response.data, { encoding: null });
+                statusMessage(MessageType.Process, `Downloaded ${file} with size ${response.data.length} bytes [(${++fileCount[0]}/${totalFiles})]`)
+            } catch (error) {
+                statusMessage(MessageType.Error, `Error downloading ${userAlbumURLs[i]}: ${getErrorMessage(error)}`)
+                statusMessage(MessageType.Error, `Skipping file ${userAlbumURLs[i]} [(${++fileCount[0]}/${totalFiles})]`)
+            }
+        }
+        statusMessage(MessageType.Completion, 'Finished getting user album files')
+    } else {
+        statusMessage(MessageType.Critical, 'No user album files found')
+    }
 
     removeExitListeners();
 }
