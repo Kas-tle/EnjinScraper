@@ -101,7 +101,3 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 Files that are stored in Enjin's Amazon S3 instance for your site will be automatically downloaded and stored in the `target/files` directory. The files will be stored in the same directory structure as they are on the S3 instance. The files will be stored in the `target/files` directory in the same directory as the `config.json` file. All information about these files will be stored in the `s3_files` table in the database. Examples of modules that store files here include galleries, forums, applications, tickets, and news posts.
 
 Files from wiki pages will be stored in the `wiki` directory. These do not have a directory structure, so they are simply in the parent folder of the wiki module's preset ID. For example, if the wiki module's preset ID is `123456`, the files will be stored in the `target/files/wiki/123456` directory.
-
-## TODO
-
-- [ ] Add more options for user data scraping (https://github.com/Kas-tle/EnjinScraper/issues/8)
