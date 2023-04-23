@@ -21,6 +21,8 @@ winget install -e --id OpenJS.NodeJS
 npx enjinscraper
 ```
 
+Note that if rerunning later, you may need to use `npx enjinscraper@latest` to force use of the latest version.
+
 ### Configuration
 
 #### Obtaining an API key
