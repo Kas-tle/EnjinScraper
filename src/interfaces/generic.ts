@@ -30,6 +30,9 @@ export interface Params {
     oldid? : string;
     domain? : string;
     album_id? : string;
+    last_post_id? : string;
+    with_replies?: boolean;
+    limit?: number;
 }
 
 export interface Pagination {

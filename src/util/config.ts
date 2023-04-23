@@ -3,7 +3,7 @@ import readline from 'readline';
 import { SiteAuth } from '../interfaces/generic';
 import { MessageType, statusMessage } from './console';
 
-interface Config {
+export interface Config {
     apiKey: string;
     domain: string;
     email: string;
@@ -15,21 +15,27 @@ interface Config {
     excludeNewsModuleIDs?: string[];
     excludeTicketModuleIDs?: string[];
     excludedWikiModuleIDs?: string[];
-    disabledModules?: {
-        forums?: boolean;
-        galleries?: boolean;
-        news?: boolean;
-        wikis?: boolean;
-        tickets?: boolean;
-        applications?: boolean;
-        comments?: boolean;
-        users?: boolean;
-        usertags?: boolean;
-        userips?: boolean;
-        files?: boolean;
+    disabledModules: {
+        forums: boolean;
+        galleries: boolean;
+        news: boolean;
+        wikis: boolean;
+        tickets: boolean;
+        applications: boolean;
+        comments: boolean;
+        users: boolean | {
+            ips: boolean;
+            tags: boolean;
+            fullinfo: boolean;
+            characters: boolean;
+            games: boolean;
+            photos: boolean;
+            wall: boolean;
+        };
+        files: boolean;
     };
-    debug?: boolean;
-    disableSSL?: boolean;
+    debug: boolean;
+    disableSSL: boolean;
 }
 
 const defaultConfig: Config = {
@@ -65,9 +71,15 @@ const defaultConfig: Config = {
         tickets: false,
         applications: false,
         comments: false,
-        users: false,
-        usertags: false,
-        userips: false,
+        users: {
+            ips: false,
+            tags: false,
+            fullinfo: true,
+            characters: true,
+            games: true,
+            photos: true,
+            wall: true,
+        },
         files: false,
     },
     debug: true,

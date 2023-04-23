@@ -9,7 +9,7 @@ import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
 import { getApplicationResponses, getApplications } from './src/scrapers/applications';
-import { getUsers } from './src/scrapers/users';
+import { getAdditionalUserData, getUsers } from './src/scrapers/users';
 import { getComments } from './src/scrapers/comments';
 import { getSiteData } from './src/scrapers/sitedata';
 import { getFiles } from './src/scrapers/files';
@@ -156,15 +156,17 @@ async function main(): Promise<void> {
     }
 
     // Get users
-    if (config.disabledModules?.users) {
+    if (config.disabledModules?.users === true) {
         statusMessage(MessageType.Critical, 'Users module disabled, skipping user tag scraping...');
-    } else if (await isModuleScraped(database, 'users')) {
+    } else if (await isModuleScraped(database, 'users') && await isModuleScraped(database, 'user_data')) {
         statusMessage(MessageType.Critical, 'Users already scraped, skipping user tag scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping users...');
-        await getUsers(database, config.domain, siteAuth, config.apiKey, config.disabledModules?.usertags, config.disabledModules?.userips);
+        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, sessionID, siteAuth, config.apiKey, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'users', true);
-        deleteFiles(['./target/recovery/user_tags.json', './target/recovery/user_ips.json']);
+        await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
+        await insertRow(database, 'scrapers', 'user_data', true);
+        deleteFiles(['./target/recovery/user_tags.json', './target/recovery/user_data.json']);
         statusMessage(MessageType.Completion, 'Finished user scraping');
     }
 

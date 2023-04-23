@@ -117,7 +117,7 @@ export namespace Profile {
                 comment_user_id: string;
                 comment_message: string;
                 comment_posted: string;
-                reply_to: null | string;
+                reply_to: null;
                 displayname: string;
                 avatar_timestamp: string;
                 avatar_ext: string;
@@ -137,7 +137,7 @@ export namespace Profile {
                     comment_user_id: string;
                     comment_message: string;
                     comment_posted: string;
-                    reply_to: string | null;
+                    reply_to: string;
                     displayname: string;
                     avatar_timestamp: string;
                     avatar_ext: string;
@@ -173,10 +173,8 @@ export namespace Profile {
             comments_total: string;
             likes: {
                 user_id: string;
-                comment_id: string;
-                displayname: string;
-                avatar_timestamp: string;
-                avatar_ext: string;
+                avatar: string;
+                username: string;
             }[];
             likes_total: number;
             embed_url: string;
@@ -275,7 +273,4 @@ export namespace Profile {
         };
     }
 }
-
-// Undocumented html based api for profile photo comments
-// https://www.megacrafting.com/ajax.php?s=social_wall&cmd=comments&profile_id=14103719&post_id=20872376
 
