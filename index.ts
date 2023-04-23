@@ -163,7 +163,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Users already scraped, skipping user tag scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping users...');
-        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, sessionID, siteAuth, config.apiKey, config.disabledModules.users);
+        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'users', true);
         await isModuleScraped(database, 'user_data') ? {} : getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'user_data', true);
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     }
 
     // Get files
-    if (config.disabledModules?.files) {
+    if (config.disabledModules?.files === true) {
         statusMessage(MessageType.Critical, 'Files module disabled, skipping file scraping...');
     } else if (
         await isModuleScraped(database, 's3_files') && 
@@ -185,18 +185,32 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Files already scraped, skipping file scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping files...');
-        await isModuleScraped(database, 's3_files') ? {} : await getS3Files(config.domain, database, siteAuth, siteID);
-        await insertRow(database, 'scrapers', 's3_files', true);
-        await isModuleScraped(database, 'wiki_files') ? {} :await getWikiFiles(database);
-        await insertRow(database, 'scrapers', 'wiki_files', true);
-        await isModuleScraped(database, 'avatar_files') ? {} :await getAvatarFiles(database, siteID);
-        await insertRow(database, 'scrapers', 'avatar_files', true);
-        await isModuleScraped(database, 'profile_cover_files') ? {} :await getProfileCoverFiles(database);
-        await insertRow(database, 'scrapers', 'profile_cover_files', true);
-        await isModuleScraped(database, 'game_box_files') ? {} :await getGameBoxFiles(database);
-        await insertRow(database, 'scrapers', 'game_box_files', true);
-        await isModuleScraped(database, 'user_album_files') ? {} :await getUserAlbumFiles(database);
-        await insertRow(database, 'scrapers', 'user_album_files', true);
+        const disabledFileModules = config.disabledModules?.files;
+        if (!await isModuleScraped(database, 'users') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.s3) : true)) {
+            await getS3Files(config.domain, database, siteAuth, siteID);
+            await insertRow(database, 'scrapers', 's3_files', true);
+        }
+        if (!await isModuleScraped(database, 'wiki_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.wiki) : true)) {
+            await getWikiFiles(database);
+            await insertRow(database, 'scrapers', 'wiki_files', true);
+        }
+        if (!await isModuleScraped(database, 'avatar_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.avatars) : true)) {
+            await getAvatarFiles(database, siteID);
+            await insertRow(database, 'scrapers', 'avatar_files', true);
+        }
+        if (!await isModuleScraped(database, 'profile_cover_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.profileCovers) : true)) {
+            await getProfileCoverFiles(database);
+            await insertRow(database, 'scrapers', 'profile_cover_files', true);
+        }
+        if (!await isModuleScraped(database, 'game_box_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.gameBoxes) : true)) {
+            await getGameBoxFiles(database);
+            await insertRow(database, 'scrapers', 'game_box_files', true);
+        }
+        if (!await isModuleScraped(database, 'user_album_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.userAlbums) : true)) {
+            await getUserAlbumFiles(database);
+            await insertRow(database, 'scrapers', 'user_album_files', true);
+        }
+
         deleteFiles([
             './target/recovery/s3_file_progress.json', 
             './target/recovery/wiki_file_progress.json',

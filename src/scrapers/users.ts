@@ -40,7 +40,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
     for (let i = userCount[0]; i < totalUsers; i++) {
         // User IPs
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.ips) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.ips) : true) {
             const userIPsResponse = await throttledGetRequest(domain, `/ajax.php?s=admin_users&cmd=getUserAdditionalData&user_id=${userIDs[i]}`, {
                 Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
                 Referer: `Referer https://${domain}/admin/users`
@@ -53,7 +53,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
 
         // Profile.getFullInfo
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.fullinfo) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.fullinfo) : true) {
             const fullInfoResponse = await enjinRequest<Profile.GetFullInfo>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getFullInfo', domain);
             if (fullInfoResponse.error) {
                 statusMessage(MessageType.Error, `Error getting full info for user ${userIDs[i]}: ${fullInfoResponse.error.message}`);
@@ -107,7 +107,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
         }
 
         // Profile.getCharacters
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.characters) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.characters) : true) {
             const charactersResponse = await enjinRequest<Profile.GetCharacters>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getCharacters', domain);
             const { characters } = charactersResponse.result;
             const charactersDB = [];
@@ -135,7 +135,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
         }
 
         // Profile.getGames
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.games) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.games) : true) {
             const gamesResponse = await enjinRequest<Profile.GetGames>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getGames', domain);
             const gamesDB = [];
             for (const game of gamesResponse.result.games) {
@@ -159,7 +159,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
         }
 
         // Profile.getPhotos
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.photos) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.photos) : true) {
             const photosResponse = await enjinRequest<Profile.GetPhotos>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getPhotos', domain);
             const { albums, photos } = photosResponse.result;
 
@@ -218,7 +218,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
         }
 
         // Profile.getWall
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.wall) : false) {
+        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.wall) : true) {
 
             const wallPostsDB = [];
             const wallCommentsDB = [];
@@ -377,9 +377,9 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
     removeExitListeners();
 }
 
-export async function getUsers(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, apiKey: string, disabledUserModules: Config["disabledModules"]["users"]) {    
+export async function getUsers(database: Database, domain: string, apiKey: string, disabledUserModules: Config["disabledModules"]["users"]) {    
     if(!fileExists('./target/recovery/user_ips.json')) {
-        const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : true);
+        const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : false);
         let result: UserAdmin.Get = {};
         const userDB: UsersDB[] = [];
     

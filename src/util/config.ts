@@ -32,7 +32,14 @@ export interface Config {
             photos: boolean;
             wall: boolean;
         };
-        files: boolean;
+        files: boolean | {
+            s3: boolean;
+            wiki: boolean;
+            avatars: boolean;
+            profileCovers: boolean;
+            gameBoxes: boolean;
+            userAlbums: boolean;
+        };
     };
     debug: boolean;
     disableSSL: boolean;
@@ -80,7 +87,14 @@ const defaultConfig: Config = {
             photos: true,
             wall: true,
         },
-        files: false,
+        files: {
+            s3: false,
+            wiki: false,
+            avatars: true,
+            profileCovers: true,
+            gameBoxes: true,
+            userAlbums: true
+        },
     },
     debug: true,
     disableSSL: false

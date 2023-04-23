@@ -58,7 +58,14 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
             "photos": true,
             "wall": true
         },
-        "files": false
+        "files": {
+            "s3": false,
+            "wiki": false,
+            "avatars": true,
+            "profileCovers": true,
+            "gameBoxes": true,
+            "userAlbums": true
+        }
     },
     "debug": false,
     "disableSSL": false
