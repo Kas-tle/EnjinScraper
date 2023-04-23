@@ -23,6 +23,7 @@ async function main(): Promise<void> {
 
     // Print Start Message
     statusMessage(MessageType.Info, `Starting ${packageJson.name} v${packageJson.version}...`);
+    statusMessage(MessageType.Info, `For support, please join the support Discord: https://discord.gg/2SfGAMskWt`);
 
     // Get config
     const config = await getConfig();

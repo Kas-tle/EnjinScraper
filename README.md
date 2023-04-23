@@ -1,8 +1,8 @@
-# EnjinScraper
+# EnjinScraper [![Discord](https://img.shields.io/discord/613163671870242838.svg?color=%237289da&label=discord)](https://discord.gg/2SfGAMskWt) [![License: AGPL](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE) [![npm version](https://badge.fury.io/js/enjinscraper.svg)](https://badge.fury.io/js/enjinscraper)
 
-Scrapes an Enjin site via the Enjin API
+Scrapes an Enjin site via the Enjin API.
 
-API calls used are described in detail [here](https://gist.github.com/Kas-tle/249d73f9f73ae43aa64413ac0ee49a37).
+For support, please join the support Discord: https://discord.gg/2SfGAMskWt.
 
 ## Usage
 
