@@ -47,8 +47,15 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
         "tickets": false,
         "applications": false,
         "comments": false,
-        "users": false,
-        "usertags": false,
+        "users": {
+            "ips": false,
+            "tags": false,
+            "fullinfo": true,
+            "characters": true,
+            "games": true,
+            "photos": true,
+            "wall": true
+        },
         "files": false
     },
     "debug": false,
@@ -56,7 +63,7 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
 }
 ```
 
-You should use an account with the greatest possible permissions, as that will increase the amount of content that can be scraped. Given that, the practical use of this tool is unfortunately limited to those with backend access to the site to be scraped. There is no neeed to enter module IDs, as the scraper will automatically gather info about all modules on the site.
+Note that data stemming from user profiles is disabled by default, as this can majorly extend the time needed to scrape sites with large member counts. You can of course change this in `disabledModules.users` You should use an account with the greatest possible permissions, as that will increase the amount of content that can be scraped. Given that, the practical use of this tool is unfortunately limited to those with backend access to the site to be scraped. There is no neeed to enter module IDs, as the scraper will automatically gather info about all modules on the site.
 
 ### Running Manually
 
