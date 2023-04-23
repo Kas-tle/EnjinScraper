@@ -44,7 +44,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
             const userIPsResponse = await throttledGetRequest(domain, `/ajax.php?s=admin_users&cmd=getUserAdditionalData&user_id=${userIDs[i]}`, {
                 Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
                 Referer: `Referer https://${domain}/admin/users`
-            }, '/userips');
+            }, '/getAdditionalUserData');
     
             const userIPs: UserIPs = userIPsResponse.data;
             await updateRow(database, 'users', 'user_id', userIDs[i], ['ip_history'], [JSON.stringify(userIPs.ips_history)]);

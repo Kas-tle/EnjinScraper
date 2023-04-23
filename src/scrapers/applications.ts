@@ -65,7 +65,7 @@ async function getApplicationCommentsCid(domain: string, siteAuth: SiteAuth, app
     const applicationResonse = await getRequest(domain, `/ajax.php?s=dashboard_applications&cmd=app&app_id=${applicationID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/dashboard/applications/application?app_id=${applicationID}`
-    });
+    }, '/getApplicationCommentsCid');
 
     const $ = cheerio.load(applicationResonse.data);
     const commentsBlockMain = $('.app_comments_block_main');
@@ -100,7 +100,7 @@ async function getApplication(domain: string, siteAuth: SiteAuth, presetID: stri
     const applicationResonse = await throttledGetRequest(domain, `/admin/editmodule/index/editoraction/form-builder/preset/${presetID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Referer: `Referer https://${domain}/admin/editmodule/index/editoraction/index/preset/${presetID}`
-    }, '/applications');
+    }, '/getApplication');
 
     const $ = cheerio.load(applicationResonse.data);
 

@@ -28,7 +28,7 @@ export async function authenticateAPI(domain: string, email: string, password: s
 }
 
 export async function authenticateSite(domain: string, email: string, password: string): Promise<SiteAuth> {
-    const loginResponse = await getRequest(domain, '/login', {}, '/auth');
+    const loginResponse = await getRequest(domain, '/login', {}, '/authenticateSite/loginResponse');
     const setCookie = loginResponse.headers['set-cookie'];
     const cf_bm_token = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
     const lastviewed = setCookie!.find((cookie: string) => cookie.includes('lastviewed'))!.split(';')[0];
@@ -45,13 +45,13 @@ export async function authenticateSite(domain: string, email: string, password: 
 
     const postLoginResponse = await postRequest(domain, '/login', formData, {
         Cookie: `${lastviewed}; enjin_browsertype=web; ${cf_bm_token}`,
-    }, '/auth');
+    }, '/authenticateSite');
 
     const phpSessID = postLoginResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
 
     const homeResponse = await getRequest(domain, '/', {
         Cookie: `${lastviewed}; ${phpSessID}; enjin_browsertype=web; ${cf_bm_token}; login_temp=1`,
-    }, '/auth');
+    }, '/authenticateSite/homeResponse');
 
     const csrfToken = homeResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
 

@@ -38,7 +38,7 @@ export async function getComments(database: Database, domain: string, siteAuth: 
     for (let i = commentCidsCount[0]; i < totalCommentCids; i++) {
         const commentResponse = await getRequest(domain, `/ajax.php?s=comments&op=load&start=0&comment_cid=${commentCids[i]}&pageSize=-1&subPageSize=-1`, {
             Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-        }, '/comments');
+        }, '/getComments');
         const response: CommentResponse = commentResponse.data;
 
         const commentsDB: CommentsDB[] = [];

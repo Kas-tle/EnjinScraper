@@ -215,7 +215,7 @@ async function getModuleUploads(database: Database, domain: string, moduleID: st
 
 export async function getWikis(domain: string, database: Database, wikiModuleIDs: string[]) {
     // We'll just get a temp token for this
-    const cfbmTokenResponse = await getRequest(domain, `/wiki/m/${wikiModuleIDs[0]}`, {}, '/wiki')
+    const cfbmTokenResponse = await getRequest(domain, `/wiki/m/${wikiModuleIDs[0]}`, {}, '/getWikis')
     const setCookie = cfbmTokenResponse.headers['set-cookie'];
     const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
     const lastviewed = setCookie!.find((cookie: string) => cookie.includes('lastviewed'))!.split(';')[0];

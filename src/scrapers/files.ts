@@ -19,7 +19,7 @@ async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: st
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         Origin: `https://${domain}`,
         Referer: `https://${domain}/admin/files`,
-    }, '/files');
+    }, '/getDirectoryListing');
 
     const dirListing: DirectoryListing = dirResponse.data.result;
     return dirListing;
@@ -165,7 +165,7 @@ export async function getFiles(domain: string, database: Database, siteAuth: Sit
             Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
             Origin: `https://${domain}`,
             Referer: `https://${domain}/admin/files`,
-        }, '/files')
+        }, '/getFiles')
         const token = tokenResponse.data.token;
         
         const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);

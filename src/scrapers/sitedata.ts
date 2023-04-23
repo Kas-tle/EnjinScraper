@@ -12,7 +12,7 @@ import { MessageType, statusMessage } from '../util/console';
 async function fetchSiteDataObject(domain: string, siteAuth: SiteAuth): Promise<SiteData | null> {
     const siteResponse = await getRequest(domain, `/admin/modules/index`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`
-    }, '/sitedata');
+    }, '/fetchSiteDataObject');
 
     const $ = cheerio.load(siteResponse.data);
 

@@ -71,7 +71,7 @@ async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAu
 async function getNewsCommentsCid(domain: string, siteAuth: SiteAuth, moduleID: string, articleID: string): Promise<string | null> {
     const newsArticleResonse = await throttledGetRequest(domain, `/home/m/${moduleID}/article/${articleID}`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-    }, '/news')
+    }, '/getNewsCommentsCid')
 
     const $ = cheerio.load(newsArticleResonse.data);
     let commentCid = null;

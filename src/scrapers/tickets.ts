@@ -220,7 +220,7 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
 async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: string, ticketModule: String): Promise<TicketUpload[]> {
     const homeResponse = await getRequest(domain, `/ajax.php?code=${ticketCode}&s=editmodule_tickets&cmd=ticket_html&preset_id=${ticketModule}&saved_data%5Bmode%5D=public`, {
         Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-    }, '/tickets');
+    }, '/getTicketUploads');
 
     const uploads: TicketUpload[] = [];
     const $ = cheerio.load(homeResponse.data);
