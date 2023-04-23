@@ -320,12 +320,8 @@ export async function getGameBoxFiles(database: Database) {
 
     let fileCount = [0];
 
-    const preGameBoxURLs = (await getColumnURLs(database, 'avatar', 'user_games'))
+    const gameBoxURLs = (await getColumnURLs(database, 'avatar', 'user_games'))
         .filter((value, index, array) => array.indexOf(value) === index);
-
-    const gameBoxURLs = preGameBoxURLs.map(url => {
-        return url.replace("/boxmedium.jpg.", "/large.jpg");
-    });
 
     if (fileExists('./target/recovery/game_box_progress.json')) {
         statusMessage(MessageType.Info, 'Recovering game box file download progress previous session...')

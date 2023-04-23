@@ -900,7 +900,7 @@ User avatars are also scraped, which combines the URLs found in `user_profiles.a
 
 Profile cover images come from `user_profiles.cover_image` and are found in either `https://assets-cloud.enjin.com/users/${userID}/cover/${fileID}.png` if the user has uploaded their own cover image, or `resources.enjin.com/${resourceLocator}/themes/${version}/image/profile/cover/${category}/${fileName}.jpg` if the user is using an Enjin provided cover image.
 
-Game boxes are the images displayed for games a user has on their profile. They are found in `assets-cloud.enjin.com/gameboxes/${gameID}/boxlarge.jpg`. Note that `boxmedium` is the original value in the table, but we replace with `boxlarge` to get the full size image.
+Game boxes are the images displayed for games a user has on their profile. They are found in `assets-cloud.enjin.com/gameboxes/${gameID}/boxmedium.jpg`.
 
 Lastly, user album images from `user_images.url_original` can be found in either `s3.amazonaws.com/assets.enjin.com/users/${userID}/pics/original/${fileName}` or `assets.enjin.com/wall_embed_images/${fileName}`.
 
