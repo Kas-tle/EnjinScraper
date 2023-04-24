@@ -292,6 +292,7 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
         for (const post of posts) {
             postsDB.push(
                 [
+                    thread.thread_id,
                     post.post_id,
                     post.post_time,
                     post.post_content,
