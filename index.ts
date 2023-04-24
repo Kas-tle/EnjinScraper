@@ -165,7 +165,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Info, 'Scraping users...');
         await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'users', true);
-        await isModuleScraped(database, 'user_data') ? {} : getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
+        await isModuleScraped(database, 'user_data') ? {} : await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'user_data', true);
         deleteFiles(['./target/recovery/user_tags.json', './target/recovery/user_data.json']);
         statusMessage(MessageType.Completion, 'Finished user scraping');
