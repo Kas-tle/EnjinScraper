@@ -229,7 +229,7 @@ export const tableSchemas: TableSchema[] = [
     {
         name: 'posts',
         schema: [
-            'thread_id TEXT'
+            'thread_id TEXT',
             'post_id TEXT PRIMARY KEY',
             'post_time TEXT',
             'post_content TEXT',
