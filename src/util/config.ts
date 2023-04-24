@@ -41,6 +41,8 @@ export interface Config {
             userAlbums: boolean;
         };
     };
+    retrySeconds: number;
+    retryTimes: number;
     debug: boolean;
     disableSSL: boolean;
 }
@@ -96,6 +98,8 @@ const defaultConfig: Config = {
             userAlbums: true
         },
     },
+    retrySeconds: 5,
+    retryTimes: 5,
     debug: true,
     disableSSL: false
 };

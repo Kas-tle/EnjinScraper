@@ -8,17 +8,24 @@ import { MessageType, statusMessage } from "./console";
 
 let id = 0;
 let protocol: string;
+let retrySeconds = 5;
+let retryTimes = 5;
 
 (async function () {
     const config = await getConfig();
     protocol = config.disableSSL ? 'http' : 'https';
+    retrySeconds = config.retrySeconds >= 0 ? config.retrySeconds : 0;
+    retryTimes = config.retryTimes >= 0 ? config.retryTimes : Number.MAX_SAFE_INTEGER;
     statusMessage(MessageType.Info, `Using ${protocol} protocol`);
+    statusMessage(MessageType.Info, `Retrying after ${retrySeconds} seconds between requests for a mximum of ${retryTimes} requests`);
 })();
+
+const retryTime = retrySeconds * 1000;
 
 export async function enjinRequest<T>(params: Params, method: string, domain: string, inputHeaders: any = {}): Promise<EnjinResponse<T>> {
     const config = await getConfig();
     let retries = 0;
-    while (retries < 5) {
+    while (retries <= retryTimes) {
         const qid = (++id).toString().padStart(7, '0');
         try {
             const { data, headers } = await axios.post<EnjinResponse<T>>(
@@ -43,23 +50,27 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
             return data;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                statusMessage(MessageType.Critical, `Enjin API rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Enjin API rate limit exceeded. Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else if (error.response && error?.response.status === 403) {
                 statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
-            } else if (error.code === 'EAI_AGAIN') {
-                statusMessage(MessageType.Critical, `DNS lookup error on request ${qid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+            } else if (error.response && error?.response.status === 524) {
+                statusMessage(MessageType.Critical, `Enjin took too long to respond per Cloudflare's 100 second limit (524 a timeout occurred) Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
+            } else if (error.code === 'EAI_AGAIN') {
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${qid}: ${getErrorMessage(error)}. Retrying...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else {
                 statusMessage(MessageType.Error, `Error making request ${qid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    statusMessage(MessageType.Error, `Enjin API rate limit exceeded. Please try again later. Exiting...`);
+    statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
@@ -71,7 +82,7 @@ let lastCallTime = 0;
 export async function getRequest(domain: string, url: string, headers: any, debugPath = '', overrideDebug = false, responseType: ResponseType | undefined = undefined): Promise<AxiosResponse> {
     const config = await getConfig();
     let retries = 0;
-    while (retries < 5) {
+    while (retries <= retryTimes) {
         const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.get(url, {
@@ -97,23 +108,27 @@ export async function getRequest(domain: string, url: string, headers: any, debu
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                statusMessage(MessageType.Critical, `Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Enjin API rate limit exceeded. Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else if (error.response && error?.response.status === 403) {
                 statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
-            } else if (error.code === 'EAI_AGAIN') {
-                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+            } else if (error.response && error?.response.status === 524) {
+                statusMessage(MessageType.Critical, `Enjin took too long to respond per Cloudflare's 100 second limit (524 a timeout occurred) Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
+            } else if (error.code === 'EAI_AGAIN') {
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else {
-                statusMessage(MessageType.Error, `Error making get request ${rid}: ${getErrorMessage(error)}`);
+                statusMessage(MessageType.Error, `Error making request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    statusMessage(MessageType.Error, `Cloudflare rate limit exceeded. Please try again later. Exiting...`);
+    statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
@@ -137,7 +152,7 @@ export async function throttledGetRequest(domain: string, url: string, headers: 
 export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath = ''): Promise<AxiosResponse> {
     const config = await getConfig();
     let retries = 0;
-    while (retries < 5) {
+    while (retries <= retryTimes) {
         const rid = (++id).toString().padStart(7, '0');
         try {
             const response = await axios.post(url, data, {
@@ -167,23 +182,27 @@ export async function postRequest(domain: string, url: string, data: any, header
             return response;
         } catch (error: any) {
             if (error.response && error?.response.status === 429) {
-                statusMessage(MessageType.Critical, `Cloudflare rate limit exceeded, retrying after 5 seconds...`);
+                statusMessage(MessageType.Critical, `Enjin API rate limit exceeded. Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else if (error.response && error?.response.status === 403) {
                 statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 return Promise.reject();
-            } else if (error.code === 'EAI_AGAIN') {
-                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying after 5 seconds...`);
+            } else if (error.response && error?.response.status === 524) {
+                statusMessage(MessageType.Critical, `Enjin took too long to respond per Cloudflare's 100 second limit (524 a timeout occurred) Retrying...`);
                 retries++;
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
+            } else if (error.code === 'EAI_AGAIN') {
+                statusMessage(MessageType.Critical, `DNS lookup error on request ${rid}: ${getErrorMessage(error)}. Retrying...`);
+                retries++;
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
             } else {
-                statusMessage(MessageType.Error, `Error making post request ${rid}: ${getErrorMessage(error)}`);
+                statusMessage(MessageType.Error, `Error making request ${rid}: ${getErrorMessage(error)}`);
                 throw error;
             }
         }
     }
-    statusMessage(MessageType.Error, `Cloudflare rate limit exceeded. Please try again later. Exiting...`);
+    statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
     process.kill(process.pid, 'SIGINT');
     return Promise.reject();
 }
