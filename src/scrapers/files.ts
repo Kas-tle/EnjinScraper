@@ -192,6 +192,23 @@ export async function getWikiFiles(database: Database) {
     removeExitListeners();
 }
 
+async function getURLArrayCfBmToken(urls: string[]): Promise<string> {
+    let cfbmToken = '';
+    try {
+        const enjinURLs = urls.filter(url => 
+            {return url.startsWith('http://assets.enjin.com/') || url.startsWith('https://assets-cloud.enjin.com/'); }
+        );
+        if (enjinURLs.length > 0) {
+            const cfbmTokenResponse = await getRequest('', enjinURLs[0], {}, '', true, 'arraybuffer');
+            const setCookie = cfbmTokenResponse.headers['set-cookie'];
+            cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+        }
+    } catch(e) {
+        statusMessage(MessageType.Error, `Error requesting cfbmToken. This could lead to rate limiting by Cloudflare: ${getErrorMessage(e)}`)
+    }
+    return cfbmToken;
+}
+
 async function getColumnURLs(database: Database, column: string, table: string): Promise<string[]> {
     const URLs: string[] = await new Promise((resolve, reject) => {
         database.all(`SELECT ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
@@ -236,10 +253,7 @@ export async function getAvatarFiles(database: Database, siteID: string) {
     const totalFiles = avatarURLs.length;
 
     if (totalFiles > 0) {
-        const cfbmTokenResponse = await getRequest('', avatarURLs[0], {}, '', true, 'arraybuffer');
-        const setCookie = cfbmTokenResponse.headers['set-cookie'];
-        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
-
+        const cfbmToken = await getURLArrayCfBmToken(avatarURLs);
         for (let i = fileCount[0]; i < totalFiles; i++) {
             try {
                 const file = avatarURLs[i];
@@ -285,10 +299,7 @@ export async function getProfileCoverFiles(database: Database) {
     const totalFiles = profileURLs.length;
 
     if (totalFiles > 0) {
-        const cfbmTokenResponse = await getRequest('', profileURLs[0], {}, '', true, 'arraybuffer');
-        const setCookie = cfbmTokenResponse.headers['set-cookie'];
-        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
-
+        const cfbmToken = await getURLArrayCfBmToken(profileURLs);
         for (let i = fileCount[0]; i < totalFiles; i++) {
             try {
                 const file = profileURLs[i];
@@ -334,10 +345,7 @@ export async function getGameBoxFiles(database: Database) {
     const totalFiles = gameBoxURLs.length;
 
     if (totalFiles > 0) {
-        const cfbmTokenResponse = await getRequest('', gameBoxURLs[0], {}, '', true, 'arraybuffer');
-        const setCookie = cfbmTokenResponse.headers['set-cookie'];
-        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
-
+        const cfbmToken = await getURLArrayCfBmToken(gameBoxURLs);
         for (let i = fileCount[0]; i < totalFiles; i++) {
             try {
                 const file = gameBoxURLs[i];
@@ -383,10 +391,7 @@ export async function getUserAlbumFiles(database: Database) {
     const totalFiles = userAlbumURLs.length;
 
     if (totalFiles > 0) {
-        const cfbmTokenResponse = await getRequest('', userAlbumURLs[0], {}, '', true, 'arraybuffer');
-        const setCookie = cfbmTokenResponse.headers['set-cookie'];
-        const cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
-
+        const cfbmToken = await getURLArrayCfBmToken(userAlbumURLs);
         for (let i = fileCount[0]; i < totalFiles; i++) {
             try {
                 const file = userAlbumURLs[i];
