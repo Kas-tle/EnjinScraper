@@ -186,7 +186,7 @@ async function main(): Promise<void> {
     } else {
         statusMessage(MessageType.Info, 'Scraping files...');
         const disabledFileModules = config.disabledModules?.files;
-        if (!await isModuleScraped(database, 'users') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.s3) : true)) {
+        if (!await isModuleScraped(database, 's3_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.s3) : true)) {
             await getS3Files(config.domain, database, siteAuth, siteID);
             await insertRow(database, 'scrapers', 's3_files', true);
         }
