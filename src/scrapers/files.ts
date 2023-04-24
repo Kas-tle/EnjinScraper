@@ -394,7 +394,7 @@ export async function getUserAlbumFiles(database: Database) {
                     Cookie: cfbmToken,
                 }, '', true, 'arraybuffer');
 
-                const filePath = path.join(process.cwd(), './target/files', file);
+                const filePath = path.join(process.cwd(), './target/files', file.replace(/^https?:\/\//i, ""));
                 const fileDirectory = path.dirname(filePath);
                 await fs.mkdir(fileDirectory, { recursive: true });
 
