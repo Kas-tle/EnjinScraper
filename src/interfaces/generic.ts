@@ -33,6 +33,9 @@ export interface Params {
     last_post_id? : string;
     with_replies?: boolean;
     limit?: number;
+    message_subject?: string;
+    message_body?: string;
+    recipients?: string[];
 }
 
 export interface Pagination {

@@ -47,6 +47,11 @@ export interface Config {
     retryTimes: number;
     debug: boolean;
     disableSSL: boolean;
+    notifier?: {
+        enabled: boolean;
+        messageSubject: string;
+        messageBody: string;
+    };
 }
 
 const defaultConfig: Config = {
