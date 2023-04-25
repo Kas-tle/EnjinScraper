@@ -49,7 +49,7 @@ async function main(): Promise<void> {
 
     // Notifier Mode
     if (config.notifier && config.notifier.enabled === true) {
-        startNotifier(database, config.domain, config.apiKey, siteAuth, config.notifier.messageSubject, config.notifier.messageBody);
+        await startNotifier(database, config.domain, config.apiKey, siteAuth, config.notifier.messageSubject, config.notifier.messageBody);
         deleteFiles(['./target/recovery/notifier_progress.json']);
     }
 
