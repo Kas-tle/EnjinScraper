@@ -70,7 +70,7 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     },
     "retrySeconds": 5, // Setting to 0 will retry instantly
     "retryTimes": 5, // Setting to 0 will disable retries; setting to -1 will retry indefinitely
-    "debug": false,
+    "debug": true,
     "disableSSL": false
 }
 ```
