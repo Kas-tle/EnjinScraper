@@ -7,23 +7,14 @@ import { writeJsonFile } from "./files";
 import { MessageType, statusMessage } from "./console";
 
 let id = 0;
-let protocol: string;
-let retrySeconds = 5;
-let retryTimes = 5;
-
-(async function () {
-    const config = await getConfig();
-    protocol = config.disableSSL ? 'http' : 'https';
-    retrySeconds = config.retrySeconds >= 0 ? config.retrySeconds : 0;
-    retryTimes = config.retryTimes >= 0 ? config.retryTimes : Number.MAX_SAFE_INTEGER;
-    statusMessage(MessageType.Info, `Using ${protocol} protocol`);
-    statusMessage(MessageType.Info, `Retrying after ${retrySeconds} seconds between requests for a mximum of ${retryTimes} requests`);
-})();
-
-const retryTime = retrySeconds * 1000;
 
 export async function enjinRequest<T>(params: Params, method: string, domain: string, inputHeaders: any = {}): Promise<EnjinResponse<T>> {
     const config = await getConfig();
+    const protocol = config.disableSSL ? 'http' : 'https';
+    const retrySeconds = config.retrySeconds >= 0 ? config.retrySeconds : 0;
+    const retryTimes = config.retryTimes >= 0 ? config.retryTimes : Number.MAX_SAFE_INTEGER;
+    const retryTime = retrySeconds * 1000;
+
     let retries = 0;
     while (retries <= retryTimes) {
         const qid = (++id).toString().padStart(7, '0');
@@ -81,6 +72,11 @@ let lastCallTime = 0;
 
 export async function getRequest(domain: string, url: string, headers: any, debugPath = '', overrideDebug = false, responseType: ResponseType | undefined = undefined): Promise<AxiosResponse> {
     const config = await getConfig();
+    const protocol = config.disableSSL ? 'http' : 'https';
+    const retrySeconds = config.retrySeconds >= 0 ? config.retrySeconds : 0;
+    const retryTimes = config.retryTimes >= 0 ? config.retryTimes : Number.MAX_SAFE_INTEGER;
+    const retryTime = retrySeconds * 1000;
+
     let retries = 0;
     while (retries <= retryTimes) {
         const rid = (++id).toString().padStart(7, '0');
@@ -151,6 +147,11 @@ export async function throttledGetRequest(domain: string, url: string, headers: 
 
 export async function postRequest(domain: string, url: string, data: any, headers: any, debugPath = ''): Promise<AxiosResponse> {
     const config = await getConfig();
+    const protocol = config.disableSSL ? 'http' : 'https';
+    const retrySeconds = config.retrySeconds >= 0 ? config.retrySeconds : 0;
+    const retryTimes = config.retryTimes >= 0 ? config.retryTimes : Number.MAX_SAFE_INTEGER;
+    const retryTime = retrySeconds * 1000;
+    
     let retries = 0;
     while (retries <= retryTimes) {
         const rid = (++id).toString().padStart(7, '0');

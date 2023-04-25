@@ -31,7 +31,7 @@ async function main(): Promise<void> {
 
     // Login to API and get session ID
     const sessionID = config.sessionID ? config.sessionID : await authenticateAPI(config.domain, config.email, config.password);
-    
+
     // Login to site and get PHPSESSID and csrf_token
     const siteAuth = config.siteAuth ? config.siteAuth : await authenticateSite(config.domain, config.email, config.password);
 
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     await initializeTables(database);
 
     // Get site data
-    if(await isModuleScraped(database, 'site_data')) {
+    if (await isModuleScraped(database, 'site_data')) {
         statusMessage(MessageType.Critical, 'Site data already scraped, moving on...');
     } else {
         await getSiteData(config.domain, siteAuth, database, siteID);
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     if (config.disabledModules?.files === true) {
         statusMessage(MessageType.Critical, 'Files module disabled, skipping file scraping...');
     } else if (
-        await isModuleScraped(database, 's3_files') && 
+        await isModuleScraped(database, 's3_files') &&
         await isModuleScraped(database, 'wiki_files') &&
         await isModuleScraped(database, 'avatar_files') &&
         await isModuleScraped(database, 'profile_cover_files') &&
@@ -230,7 +230,7 @@ async function main(): Promise<void> {
         }
 
         deleteFiles([
-            './target/recovery/s3_file_progress.json', 
+            './target/recovery/s3_file_progress.json',
             './target/recovery/wiki_file_progress.json',
             './target/recovery/avatar_file_progress.json',
             './target/recovery/cover_file_progress.json',
