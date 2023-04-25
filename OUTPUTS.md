@@ -9,6 +9,8 @@
       - [Presets](#presets)
       - [Pages](#pages)
       - [Site Data](#site-data-1)
+    + [HTML Modules](#html-modules)
+      - [HTML Modules](#html-modules-1)
     + [Forums](#forums)
       - [Forum Modules](#forum-modules)
       - [Forums](#forums-1)
@@ -153,6 +155,18 @@ These tables are used to store information about overall site data and ultimatel
     `plan`: A JSON object that contains data about the current plan of the site (`JSON`)
     `licenses`: A JSON object that contains data about the licenses used by the site (`JSON`)
 
+### HTML Modules
+
+These tables store the conent of HTML modules scraped from the admin panel.
+
+#### HTML Modules
+
+- `html_modules`: Contains the HTML, JavaScript, and CSS of HTML modules
+    - `module_id`: The ID of the HTML module (`TEXT PRIMARY KEY`)
+    - `html`: The HTML content of the module (`TEXT`)
+    - `css`: The CSS content of the module (`TEXT`)
+    - `javascript`: The JavaScript content of the module (`TEXT`)
+
 ### Forums
 
 These tables are used to store information about the forum modules that were scraped.
@@ -281,6 +295,7 @@ These tables are used to store information about the forum modules that were scr
 #### Posts
 
 - `posts`: Contains information about the posts scraped from the forums
+    - `thread_id`: The ID of the thread the post belongs to (`TEXT`)
     - `post_id`: The ID of the post (`TEXT PRIMARY KEY`)
     - `post_time`: The timestamp of the post (`TEXT`)
     - `post_content`: The content of the post (`TEXT`)
@@ -962,6 +977,9 @@ Some generic get and post requests will also be written. These are contained in 
     - `getApplication`
     - `getApplicationCommentsCid`
     - `getComments`
+    - `getModuleHTML`
+    - `getModuleCss`
+    - `getModuleJs`
     - `getNewsCommentsCid`
     - `getTicketUploads`
 - `post`

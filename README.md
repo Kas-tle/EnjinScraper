@@ -42,6 +42,7 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "email": "someemail@email.com", // Required
     "password": "somepassword", // Required
     "disabledModules": {
+        "html": false,
         "forums": false,
         "galleries": false,
         "news": false,
@@ -94,6 +95,7 @@ The scraper will output an sqlite file at `target/site.sqlite` in the root direc
 - `presets`: Contains information about presets, essentially a list of individual modules
 - `pages`: Contains information about modules in the context of the page they reside on
 - `site_data`: A table that stores various information about a website
+- `html_modules`: Contains the HTML, JavaScript, and CSS of HTML modules
 - `forum_modules`: Contains information about the forum modules that were scraped
 - `forums`: Contains information about the forums scraped from the forum modules
 - `threads`: Contains information about the threads scraped from the forums

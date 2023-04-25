@@ -1,6 +1,6 @@
 {
     "name": "enjinscraper",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Scrapes an Enjin site via the Enjin API",
     "repository": "https://github.com/Kas-tle/EnjinScraper.git",
     "author": "Joshua Castle <packages@kastle.dev",
@@ -15,6 +15,7 @@
     "devDependencies": {
         "@types/escodegen": "^0.0.7",
         "@types/esprima": "^4.0.3",
+        "@types/jsdom": "^21.1.1",
         "@types/node": "^18.13.0",
         "@types/sqlite3": "^3.1.8",
         "typescript": "^4.9.5"
@@ -26,6 +27,7 @@
         "cheerio": "^1.0.0-rc.12",
         "escodegen": "^2.0.0",
         "esprima": "^4.0.1",
+        "jsdom": "^21.1.1",
         "sqlite3": "^5.1.6"
     }
 }

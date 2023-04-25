@@ -10,12 +10,14 @@ export interface Config {
     password: string;
     sessionID?: string;
     siteAuth?: SiteAuth;
+    excludeHTMLModuleIDs?: string[];
     excludeForumModuleIDs?: string[];
     excludeGalleryModuleIDs?: string[];
     excludeNewsModuleIDs?: string[];
     excludeTicketModuleIDs?: string[];
     excludedWikiModuleIDs?: string[];
     disabledModules: {
+        html: boolean;
         forums: boolean;
         galleries: boolean;
         news: boolean;
@@ -52,27 +54,17 @@ const defaultConfig: Config = {
     domain: "www.example.com",
     email: "someemail@email.com",
     password: "somepassword",
-    excludeForumModuleIDs: [
+    excludeHTMLModuleIDs: [
         "1000001",
         "1000002"
     ],
-    excludeGalleryModuleIDs: [
-        "1000001",
-        "1000002"
-    ],
-    excludeNewsModuleIDs: [
-        "1000001",
-        "1000002"
-    ],
-    excludeTicketModuleIDs: [
-        "1000001",
-        "1000002"
-    ],
-    excludedWikiModuleIDs: [
-        "1000001",
-        "1000002"
-    ],
+    excludeForumModuleIDs: [],
+    excludeGalleryModuleIDs: [],
+    excludeNewsModuleIDs: [],
+    excludeTicketModuleIDs: [],
+    excludedWikiModuleIDs: [],
     disabledModules: {
+        html: false,
         forums: false,
         galleries: false,
         news: false,

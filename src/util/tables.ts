@@ -101,6 +101,17 @@ export const tableSchemas: TableSchema[] = [
         ]
     },
 
+    // HTML Modules
+    {
+        name: 'html_modules',
+        schema: [
+            'module_id TEXT PRIMARY KEY',
+            'html TEXT',
+            'css TEXT',
+            'javascript TEXT'
+        ],
+    },
+
     // Forums
     {
         name: 'forum_modules',

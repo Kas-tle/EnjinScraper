@@ -16,6 +16,7 @@ import { getAvatarFiles, getGameBoxFiles, getProfileCoverFiles, getS3Files, getU
 import { getWikis } from './src/scrapers/wiki';
 import { getGalleries } from './src/scrapers/galleries';
 import { MessageType, statusMessage } from './src/util/console';
+import { getHTMLModules } from './src/scrapers/html';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -51,6 +52,23 @@ async function main(): Promise<void> {
     } else {
         await getSiteData(config.domain, siteAuth, database, siteID);
         await insertRow(database, 'scrapers', 'site_data', true);
+    }
+
+    // Get HTML modules
+    let htmlModuleIDs = await queryModuleIDs(database, 'html');
+    config.excludeHTMLModuleIDs ? htmlModuleIDs.filter(id => !config.excludeHTMLModuleIDs?.includes(id)) : {};
+    if (htmlModuleIDs.length === 0) {
+        statusMessage(MessageType.Critical, 'No HTML module IDs for site, skipping forum scraping...');
+    } else if (config.disabledModules?.html) {
+        statusMessage(MessageType.Critical, 'HTML module disabled, skipping forum scraping...');
+    } else if (await isModuleScraped(database, 'html')) {
+        statusMessage(MessageType.Critical, 'HTML already scraped, skipping forum scraping...');
+    } else {
+        statusMessage(MessageType.Info, 'Scraping HTML modules...');
+        await getHTMLModules(config.domain, siteAuth, database, htmlModuleIDs);
+        await insertRow(database, 'scrapers', 'html', true);
+        deleteFiles(['./target/recovery/html_progress.json']);
+        statusMessage(MessageType.Completion, 'Finished HTML module scraping');
     }
 
     // Get forums
