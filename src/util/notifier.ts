@@ -46,6 +46,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
     statusMessage(MessageType.Info, `Sending messages to ${totalUsers} users... Estimated time: ${(totalUsers - userCount[0]) * 21 / 3600} hours`);
 
     for (let i = userCount[0]; i < totalUsers; i++) {
+        userCount = [i]
         const pmRequest = await enjinRequest<Messages.SendMessage> ({
             recipients: [users[i].user_id],
             message_subject: messageSubject,
@@ -57,9 +58,9 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
 
         if (pmRequest.error) {
             statusMessage(MessageType.Error, `Error sending message to ${users[i].user_id} ${users[i].username}: ${pmRequest.error.code}, ${pmRequest.error.message}`);
-            statusMessage(MessageType.Process, `Skipping ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
             if (pmRequest.error.message.startsWith('This user has chosen to only')) {
                 await insertRow(database, 'private_users', users[i].user_id, users[i].username);
+                statusMessage(MessageType.Process, `Skipping ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
             } else {
                 const match = pmRequest.error.message.match(/Please wait (\d+) (\w+) before sending another message\./)
                 if (match) {
@@ -77,6 +78,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
                         statusMessage(MessageType.Error, `Did not expect unit ${unit}... Exiting...`);
                         process.kill(process.pid, 'SIGINT');
                     }
+                    statusMessage(MessageType.Process, `Waiting ${timeInMilliseconds}ms (${time} ${unit}) before trying ${users[i].user_id} ${users[i].username} again...`);
                     await new Promise((resolve) => setTimeout(resolve, timeInMilliseconds + 1000));
 
                     // Retry the user.
