@@ -196,7 +196,7 @@ async function getURLArrayCfBmToken(urls: string[]): Promise<string> {
     let cfbmToken = '';
     try {
         const enjinURLs = urls.filter(url => 
-            {return url.startsWith('http://assets.enjin.com/') || url.startsWith('https://assets-cloud.enjin.com/'); }
+            {return url.startsWith('http://assets.enjin.com/') || url.startsWith('https://assets.enjin.com/') || url.startsWith('https://assets-cloud.enjin.com/') || url.startsWith('https://resources.enjin.com/') ; }
         );
         if (enjinURLs.length > 0) {
             const cfbmTokenResponse = await getRequest('', enjinURLs[0], {}, '', true, 'arraybuffer');
