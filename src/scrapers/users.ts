@@ -11,14 +11,14 @@ import { MessageType, statusMessage } from '../util/console';
 import { Config } from '../util/config';
 import { Profile } from '../interfaces/profile';
 
-export async function getAdditionalUserData(domain: string, sessionID: string, siteAuth: SiteAuth, database: Database, disabledUserModules: Config["disabledModules"]["users"]) {
+export async function getAdditionalUserData(domain: string, sessionID: string, siteAuth: SiteAuth | null, database: Database, disabledUserModules: Config["disabledModules"]["users"], adminMode: boolean) {
     statusMessage(MessageType.Info, 'Getting additional user data...')
 
     let userCount = [0];
 
     const userIDs: string[] = await new Promise((resolve, reject) => {
         database.all('SELECT user_id FROM users',
-            (err, rows: [{user_id: string}]) => {
+            (err, rows: [{ user_id: string }]) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -28,24 +28,24 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
             });
     });
 
-    if(fileExists('./target/recovery/user_data.json')) {
+    if (fileExists('./target/recovery/user_data.json')) {
         statusMessage(MessageType.Info, 'Recovering user data progress previous session...')
         const progress = parseJsonFile('./target/recovery/user_data.json') as [number[]];
         userCount = progress[0];
     }
 
-    addExitListeners(['./target/recovery/user_data.json'],[[userCount]])
+    addExitListeners(['./target/recovery/user_data.json'], [[userCount]])
 
     const totalUsers = userIDs.length;
 
     for (let i = userCount[0]; i < totalUsers; i++) {
         // User IPs
-        if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.ips) : true) {
+        if (adminMode && siteAuth && ((typeof disabledUserModules === 'object') ? !(disabledUserModules.ips) : true)) {
             const userIPsResponse = await throttledGetRequest(domain, `/ajax.php?s=admin_users&cmd=getUserAdditionalData&user_id=${userIDs[i]}`, {
                 Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
                 Referer: `Referer https://${domain}/admin/users`
             }, '/getAdditionalUserData');
-    
+
             const userIPs: UserIPs = userIPsResponse.data;
             await updateRow(database, 'users', 'user_id', userIDs[i], ['ip_history'], [JSON.stringify(userIPs.ips_history)]);
             statusMessage(MessageType.Plain, `Found ${userIPs.ips_history.length} IPs for user ${userIDs[i]}`);
@@ -54,7 +54,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
         // Profile.getFullInfo
         if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.fullinfo) : true) {
-            const fullInfoResponse = await enjinRequest<Profile.GetFullInfo>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getFullInfo', domain);
+            const fullInfoResponse = await enjinRequest<Profile.GetFullInfo>({ session_id: sessionID, user_id: userIDs[i] }, 'Profile.getFullInfo', domain);
             if (fullInfoResponse.error) {
                 statusMessage(MessageType.Error, `Error getting full info for user ${userIDs[i]}: ${fullInfoResponse.error.message}`);
                 statusMessage(MessageType.Process, `Skipping user ${userIDs[i]} [(${++userCount[0]}/${totalUsers})]`);
@@ -108,7 +108,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
         // Profile.getCharacters
         if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.characters) : true) {
-            const charactersResponse = await enjinRequest<Profile.GetCharacters>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getCharacters', domain);
+            const charactersResponse = await enjinRequest<Profile.GetCharacters>({ session_id: sessionID, user_id: userIDs[i] }, 'Profile.getCharacters', domain);
             const { characters } = charactersResponse.result;
             const charactersDB = [];
             for (const gameRid of Object.keys(characters)) {
@@ -136,7 +136,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
         // Profile.getGames
         if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.games) : true) {
-            const gamesResponse = await enjinRequest<Profile.GetGames>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getGames', domain);
+            const gamesResponse = await enjinRequest<Profile.GetGames>({ session_id: sessionID, user_id: userIDs[i] }, 'Profile.getGames', domain);
             const gamesDB = [];
             for (const game of gamesResponse.result.games) {
                 gamesDB.push([
@@ -160,7 +160,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
 
         // Profile.getPhotos
         if ((typeof disabledUserModules === 'object') ? !(disabledUserModules.photos) : true) {
-            const photosResponse = await enjinRequest<Profile.GetPhotos>({session_id: sessionID, user_id: userIDs[i]}, 'Profile.getPhotos', domain);
+            const photosResponse = await enjinRequest<Profile.GetPhotos>({ session_id: sessionID, user_id: userIDs[i] }, 'Profile.getPhotos', domain);
             const { albums, photos } = photosResponse.result;
 
             const albumsDB = [];
@@ -231,8 +231,8 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
             while (next_page) {
                 statusMessage(MessageType.Plain, `Getting wall page ${++page} for user ${userIDs[i]}`);
                 const wallResponse = await enjinRequest<Profile.GetWall>({
-                    session_id: sessionID, 
-                    user_id: userIDs[i], 
+                    session_id: sessionID,
+                    user_id: userIDs[i],
                     last_post_id: lastPostID,
                     with_replies: true,
                     limit: 30,
@@ -277,7 +277,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
                         post.username,
                         post.is_online,
                     ]);
-    
+
                     for (const comment of post.comments) {
                         wallCommentsDB.push([
                             comment.comment_id,
@@ -303,7 +303,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
                             comment.comment_message_clean,
                             comment.is_online,
                         ]);
-    
+
                         for (const reply of comment.replies) {
                             wallCommentsDB.push([
                                 reply.comment_id,
@@ -329,8 +329,8 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
                                 null,
                                 null,
                             ]);
-    
-                            for(const like of reply.likes) {
+
+                            for (const like of reply.likes) {
                                 wallCommentLikesDB.push([
                                     like.user_id,
                                     reply.comment_id,
@@ -340,8 +340,8 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
                                 ]);
                             }
                         }
-    
-                        for(const like of comment.likes) {
+
+                        for (const like of comment.likes) {
                             wallCommentLikesDB.push([
                                 like.user_id,
                                 comment.comment_id,
@@ -351,8 +351,8 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
                             ]);
                         }
                     }
-    
-                    for(const like of post.likes) {
+
+                    for (const like of post.likes) {
                         wallPostLikesDB.push([
                             like.user_id,
                             post.post_id,
@@ -377,12 +377,12 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
     removeExitListeners();
 }
 
-export async function getUsers(database: Database, domain: string, apiKey: string, disabledUserModules: Config["disabledModules"]["users"]) {    
-    if(!fileExists('./target/recovery/user_ips.json')) {
-        const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : false);
+export async function getUsers(database: Database, domain: string, apiKey: string | null, disabledUserModules: Config["disabledModules"]["users"]) {
+    const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : false);
+    const userDB: UsersDB[] = [];
+
+    if (apiKey !== null) {
         let result: UserAdmin.Get = {};
-        const userDB: UsersDB[] = [];
-    
         let page = 1;
     
         do {
@@ -430,7 +430,61 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                 page++;
             }
         } while (Object.keys(result).length > 0);
-    
-        await insertRows(database, 'users', userDB);
+    } else {
+        const userIDs: string[] = [];
+        userIDs.push(...await getColumnUsers(database, 'forums', 'thread_lastpost_user_id'));
+        userIDs.push(...await getColumnUsers(database, 'forums'));
+        userIDs.push(...await getColumnUsers(database, 'threads', 'thread_user_id'));
+        userIDs.push(...await getColumnUsers(database, 'threads', 'thread_lastpost_user_id'));
+        userIDs.push(...await getColumnUsers(database, 'posts', 'post_user_id'));
+        userIDs.push(...await getColumnUsers(database, 'gallery_images'));
+        userIDs.push(...await getColumnUsers(database, 'gallery_tags'));
+        userIDs.push(...await getColumnUsers(database, 'wiki_likes'));
+        userIDs.push(...await getColumnUsers(database, 'news_articles'));
+        userIDs.push(...await getColumnUsers(database, 'ticket_replies'));
+        userIDs.push(...await getColumnUsers(database, 'application_responses'));
+        userIDs.push(...await getColumnUsers(database, 'application_responses', 'admin_user_id'));
+        userIDs.push(...await getColumnUsers(database, 'comments'));
+
+        const uniqueUserIDs = [...new Set(userIDs)];
+
+        for (const userID of uniqueUserIDs) {
+            userDB.push([
+                userID,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ]);
+        }
     }
+
+    await insertRows(database, 'users', userDB);
+}
+
+async function getColumnUsers(database: Database, table: string, column='user_id'): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+        const query = `SELECT DISTINCT ${column} FROM ${table} WHERE ${column} IS NOT NULL`;
+        database.all(query, (err, rows: { [key: string]: string; }[]) => {
+            if (err) {
+                reject(err);
+            } else {
+                const userIDs = rows.map(row => row[column]);
+                resolve(userIDs);
+            }
+        });
+    });
 }

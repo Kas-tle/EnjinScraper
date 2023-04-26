@@ -39,6 +39,15 @@ export async function getComments(database: Database, domain: string, siteAuth: 
         const commentResponse = await getRequest(domain, `/ajax.php?s=comments&op=load&start=0&comment_cid=${commentCids[i]}&pageSize=-1&subPageSize=-1`, {
             Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
         }, '/getComments');
+
+        if (commentResponse.data.error) {
+            statusMessage(MessageType.Error, `Error getting comments for comment cid ${commentCids[i]}: ${commentResponse.data.error.code} ${commentResponse.data.error.message}`);
+            if (commentResponse.data.error === "The action you requested has expired, please reload the page and try again.") {
+                statusMessage(MessageType.Critical, 'Invalid siteAuth; please delete the siteAuth object from the config.json file and try again');
+                process.kill(process.pid, 'SIGINT');
+            }
+        }
+
         const response: CommentResponse = commentResponse.data;
 
         const commentsDB: CommentsDB[] = [];

@@ -249,7 +249,7 @@ export async function getApplications(database: Database, domain: string, siteAu
     }
 }
 
-export async function getApplicationResponses(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, siteID: string) {
+export async function getApplicationResponses(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth | null, siteID: string) {
     const applicationTypes = await getApplicationTypes(domain);
     statusMessage(MessageType.Info, `Found ${applicationTypes.length} application types: ${applicationTypes.join(', ')}`);
 
@@ -329,7 +329,7 @@ export async function getApplicationResponses(database: Database, domain: string
                 null
             ]
 
-            if (result.comments > 0) {
+            if (result.comments > 0 && siteAuth !== null) {
                 const commentCid = await getApplicationCommentsCid(domain, siteAuth, result.application_id);
                 values[values.length - 2] = commentCid.comments_cid;
                 values[values.length - 1] = commentCid.admin_comments_cid;

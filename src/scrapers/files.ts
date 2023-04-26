@@ -1,3 +1,4 @@
+import * as cheerio from 'cheerio';
 import { Directory, DirectoryListing, FileData, S3FilesDB } from "../interfaces/files";
 import { SiteAuth } from "../interfaces/generic";
 import { addExitListeners, removeExitListeners } from "../util/exit";
@@ -9,6 +10,7 @@ import { getErrorMessage } from "../util/error";
 import { Database } from "sqlite3";
 import { insertRows } from "../util/database";
 import { MessageType, statusMessage } from "../util/console";
+import { UserData } from '../interfaces/applications';
 
 async function getDirectoryListing(domain: string, siteAuth: SiteAuth, token: string, path: string): Promise<DirectoryListing> {
     const fileData = new URLSearchParams({
@@ -63,6 +65,70 @@ async function getS3FileUrls(domain: string, siteAuth: SiteAuth, token: string, 
     return allFileData;
 }
 
+function extractImageSrcs(html: string, siteID: string): string[] {
+    const $ = cheerio.load(html);
+    const imageSources: string[] = [];
+    $('img').each((_, elem) => {
+        const src = $(elem).attr('src');
+        if (src && src.startsWith(`https://s3.amazonaws.com/files.enjin.com/${siteID}`)) {
+            imageSources.push(src);
+        }
+    });
+    return imageSources;
+}
+
+function parseAppAttachments(app: string, siteID: string): string[] {
+    const userData = JSON.parse(app);
+    const pattern = /^(\d{6})(,\d{6})*$/;
+    const appAttachments: string[] = [];
+    for (const key in userData) {
+        if (pattern.test(key)) {
+            for (const imgID of userData[key].split(",")) {
+                appAttachments.push(
+                    `https://s3.amazonaws.com/files.enjin.com/${siteID}/module_appform/full/${imgID}.jpg`,
+                    `https://s3.amazonaws.com/files.enjin.com/${siteID}/module_appform/thumb/${imgID}.jpg`
+                )
+            }
+        }
+    }
+    return appAttachments;
+}
+
+async function dbScrapeS3FileURLs(database: Database, siteID: string): Promise<FileData[]> {
+    const URLs: string[] = [];
+
+    const postsHTML: string[] = await getColumnURLs(database, 'post_content_html', 'posts');
+    for (const html of postsHTML) {
+        URLs.push(...extractImageSrcs(html, siteID));
+    }
+
+    const newsArticlesHTML: string[] = await getColumnURLs(database, 'content', 'news_articles');
+    for (const html of newsArticlesHTML) {
+        URLs.push(...extractImageSrcs(html, siteID));
+    }
+
+    const applicationsUserData: string[] = await getColumnURLs(database, 'user_data', 'application_responses');
+    for (const app of applicationsUserData) {
+        URLs.push(...parseAppAttachments(app, siteID));
+    }
+
+    URLs.push(...await getColumnURLs(database, 'url_original', 'gallery_images'));
+
+    const allFileData: FileData[] = [];
+    const uniqueURLs = [...new Set(URLs)];
+    for (const url of uniqueURLs) {
+        const urlObject = new URL(url);
+        const pathParts = urlObject.pathname.split('/').filter(part => part.length > 0);
+        if (pathParts.length < 3) { continue; }
+        const dirPath = pathParts.slice(0, pathParts.length - 1).join('/');
+        const filename = pathParts[pathParts.length - 1];
+
+        allFileData.push({ filename: filename, url, dirPath: dirPath });
+    }
+
+    return allFileData;
+}
+
 async function downloadS3Files(database: Database, targetPath: string) {
     let fileCount = [0];
 
@@ -109,17 +175,25 @@ async function downloadS3Files(database: Database, targetPath: string) {
     removeExitListeners();
 }
 
-export async function getS3Files(domain: string, database: Database, siteAuth: SiteAuth, siteID: string) {
+export async function getS3Files(domain: string, database: Database, siteAuth: SiteAuth | null, siteID: string, adminMode: boolean) {
     if (!fileExists('./target/recovery/s3_file_progress.json')) {
-        const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
-            Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
-            Origin: `https://${domain}`,
-            Referer: `https://${domain}/admin/files`,
-        }, '/getFiles')
-        const token = tokenResponse.data.token;
 
-        const s3FileUrls: FileData[] = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
         const s3FilesDB: S3FilesDB[] = [];
+        let s3FileUrls: FileData[] = [];
+
+        if (adminMode && siteAuth) {
+            const tokenResponse = await postRequest(domain, '/moxiemanager/api.php?action=token', '', {
+                Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+                Origin: `https://${domain}`,
+                Referer: `https://${domain}/admin/files`,
+            }, '/getFiles')
+            const token = tokenResponse.data.token;
+
+            s3FileUrls = await getS3FileUrls(domain, siteAuth, token, `/${siteID}`);
+        } else {
+            s3FileUrls = await dbScrapeS3FileURLs(database, siteID);
+        }
+
         for (const file of s3FileUrls) {
             s3FilesDB.push([
                 file.filename,
@@ -127,6 +201,7 @@ export async function getS3Files(domain: string, database: Database, siteAuth: S
                 file.dirPath,
             ]);
         }
+
         await insertRows(database, 's3_files', s3FilesDB);
     }
 
@@ -195,15 +270,14 @@ export async function getWikiFiles(database: Database) {
 async function getURLArrayCfBmToken(urls: string[]): Promise<string> {
     let cfbmToken = '';
     try {
-        const enjinURLs = urls.filter(url => 
-            {return url.startsWith('http://assets.enjin.com/') || url.startsWith('https://assets.enjin.com/') || url.startsWith('https://assets-cloud.enjin.com/') || url.startsWith('https://resources.enjin.com/') ; }
+        const enjinURLs = urls.filter(url => { return url.startsWith('http://assets.enjin.com/') || url.startsWith('https://assets.enjin.com/') || url.startsWith('https://assets-cloud.enjin.com/') || url.startsWith('https://resources.enjin.com/'); }
         );
         if (enjinURLs.length > 0) {
             const cfbmTokenResponse = await getRequest('', enjinURLs[0], {}, '', true, 'arraybuffer');
             const setCookie = cfbmTokenResponse.headers['set-cookie'];
             cfbmToken = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
         }
-    } catch(e) {
+    } catch (e) {
         statusMessage(MessageType.Error, `Error requesting cfbmToken. This could lead to rate limiting by Cloudflare: ${getErrorMessage(e)}`)
     }
     return cfbmToken;
@@ -211,7 +285,7 @@ async function getURLArrayCfBmToken(urls: string[]): Promise<string> {
 
 async function getColumnURLs(database: Database, column: string, table: string): Promise<string[]> {
     const URLs: string[] = await new Promise((resolve, reject) => {
-        database.all(`SELECT ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
+        database.all(`SELECT DISTINCT ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
             (err, rows: [{ [column: string]: string }]) => {
                 if (err) {
                     reject(err);
@@ -237,7 +311,7 @@ export async function getAvatarFiles(database: Database, siteID: string) {
 
     const avatarURLs: string[] = preAvatarURLs.filter(url => {
         return !url.startsWith(`https://s3.amazonaws.com/files.enjin.com/${siteID}/`) &&
-        !url.startsWith("https://cravatar.eu/");
+            !url.startsWith("https://cravatar.eu/");
     }).map(url => {
         return url.replace("/medium.", "/full.");
     });

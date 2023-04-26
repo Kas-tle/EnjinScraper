@@ -16,7 +16,7 @@ export namespace Applications {
     }
 }
 
-interface UserData {
+export interface UserData {
     [key: string]: string | number | boolean | string[] | number[] | boolean[]
 }
 

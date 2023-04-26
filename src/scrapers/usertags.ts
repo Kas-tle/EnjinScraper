@@ -20,8 +20,8 @@ async function getUserTags(domain: string, apiKey: string, userID: string): Prom
     return data.result;
 }
 
-export async function getAllUserTags(domain: string, apiKey: string, disableUserTags: boolean): Promise<Record<string, UserAdmin.GetUserTags>> {
-    if (disableUserTags) {
+export async function getAllUserTags(domain: string, apiKey: string | null, disableUserTags: boolean): Promise<Record<string, UserAdmin.GetUserTags>> {
+    if (disableUserTags || apiKey === null) {
         return {}
     };
     

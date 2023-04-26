@@ -109,7 +109,7 @@ async function getTicketReplies(domain: string, sessionID: string, ticketCode: s
     return [replies, has_uploads];
 }
 
-async function getTicketsByModule(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, modules: string[]) {
+async function getTicketsByModule(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth | null, modules: string[], adminMode: boolean) {
     const moduleCount = [0];
     const ticketCount = [0];
     let totalModules = modules.length;
@@ -179,7 +179,7 @@ async function getTicketsByModule(database: Database, domain: string, sessionID:
                     has_uploads,
                     null
                 ];
-                if (has_uploads) {
+                if (has_uploads && siteAuth && adminMode) {
                     const uploads = await getTicketUploads(domain, siteAuth, ticket.code, ticket.preset_id);
                     values[values.length-1] = JSON.stringify(uploads);
                 }
@@ -241,14 +241,15 @@ async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: 
     return uploads;
 }
 
-export async function getAllTickets(database: Database, domain: string, apiKey: string, sessionID: string, siteAuth: SiteAuth, excludedModules: string[] | null) {
-    let modules: string[];
+export async function getAllTickets(database: Database, domain: string, apiKey: string | null, sessionID: string, siteAuth: SiteAuth | null, adminMode: boolean, excludedModules: string[] | null, manualModules: string[] | null) {
+    let modules: string[] = [];
     if (fileExists('./target/recovery/module_tickets.json')) {
         modules = [];
-    } else {
+    } else if (apiKey) {
         modules = await getTicketModules(database, domain, apiKey);
     }
+    manualModules ? modules = modules.concat(manualModules) : {};
     excludedModules ? modules = modules.filter(module => !excludedModules.includes(module)) : {};
     statusMessage(MessageType.Info, `Found ${modules.length} ticket modules: ${modules.join(', ')}`);
-    await getTicketsByModule(database, domain, sessionID, siteAuth, modules);
+    await getTicketsByModule(database, domain, sessionID, siteAuth, modules, adminMode);
 }

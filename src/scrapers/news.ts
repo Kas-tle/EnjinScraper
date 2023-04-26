@@ -15,7 +15,7 @@ interface NewsModule {
     [key: string]: NewsArticle;
 }
 
-async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAuth, newsModuleID: string, database: Database) {
+async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAuth | null, newsModuleID: string, database: Database) {
     let result: News.GetNews = [];
 
     let page = 1;
@@ -56,7 +56,7 @@ async function getModuleNews(domain: string, sessionID: string, siteAuth: SiteAu
                     null
                 ]
                 
-                if (+newsPost.num_comments > 0) {
+                if (+newsPost.num_comments > 0 && siteAuth !== null) {
                     const commentCid = await getNewsCommentsCid(domain, siteAuth, newsModuleID, newsPost.article_id);
                     values[values.length-1] = commentCid;
                 }
@@ -91,7 +91,7 @@ async function getNewsCommentsCid(domain: string, siteAuth: SiteAuth, moduleID: 
     return commentCid;
 }
 
-export async function getNews(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth, newsModuleIDs: string[]) {
+export async function getNews(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth | null, newsModuleIDs: string[]) {
     await insertRow(database, 'scrapers', 'news', false);
     const totalNewsModules = newsModuleIDs.length;
     let currentNewsModule = 1;

@@ -1,11 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import * as readline from 'readline';
 import * as cheerio from 'cheerio';
 import { Site } from "../interfaces/site";
 import { User } from "../interfaces/user";
 import { enjinRequest, getRequest, postRequest } from '../util/request';
 import { SiteAuth } from '../interfaces/generic';
 import { MessageType, statusMessage } from '../util/console';
+import { getErrorMessage } from '../util/error';
 
 export async function authenticateAPI(domain: string, email: string, password: string): Promise<string> {
     const params = {
@@ -27,40 +29,72 @@ export async function authenticateAPI(domain: string, email: string, password: s
     return data.result.session_id;
 }
 
-export async function authenticateSite(domain: string, email: string, password: string): Promise<SiteAuth> {
-    const loginResponse = await getRequest(domain, '/login', {}, '/authenticateSite/loginResponse');
-    const setCookie = loginResponse.headers['set-cookie'];
-    const cf_bm_token = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
-    const lastviewed = setCookie!.find((cookie: string) => cookie.includes('lastviewed'))!.split(';')[0];
 
-    const $ = cheerio.load(loginResponse.data);
-    const formName = $('div.input input[type="password"]').attr('name');
-
-    const formData = new URLSearchParams({
-        m: '0',
-        do: '',
-        username: email,
-        [formName!]: password
+function booleanPromptUser(question: string): Promise<void> {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
     });
+    return new Promise(resolve => {
+        rl.question(`${question} (y/n) `, (answer) => {
+            if (answer.toLowerCase() === 'y') {
+                statusMessage(MessageType.Plain, 'Continuing...')
+                resolve();
+            } else if (answer.toLowerCase() === 'n') {
+                statusMessage(MessageType.Plain, 'Exiting...')
+                rl.close();
+                process.exit(0);
+            } else {
+                statusMessage(MessageType.Plain, 'Invalid input. Please enter y or n.');
+                booleanPromptUser(question).then(resolve);
+            }
+        });
+    });
+}
 
-    const postLoginResponse = await postRequest(domain, '/login', formData, {
-        Cookie: `${lastviewed}; enjin_browsertype=web; ${cf_bm_token}`,
-    }, '/authenticateSite');
+export async function authenticateSite(domain: string, email: string, password: string): Promise<SiteAuth | null> {
+    try {
+        const loginResponse = await getRequest(domain, '/login', {}, '/authenticateSite/loginResponse');
+        const setCookie = loginResponse.headers['set-cookie'];
+        const cf_bm_token = setCookie!.find((cookie: string) => cookie.includes('__cf_bm'))!.split(';')[0];
+        const lastviewed = setCookie!.find((cookie: string) => cookie.includes('lastviewed'))!.split(';')[0];
 
-    const phpSessID = postLoginResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
+        const $ = cheerio.load(loginResponse.data);
+        const formName = $('div.input input[type="password"]').attr('name');
 
-    const homeResponse = await getRequest(domain, '/', {
-        Cookie: `${lastviewed}; ${phpSessID}; enjin_browsertype=web; ${cf_bm_token}; login_temp=1`,
-    }, '/authenticateSite/homeResponse');
+        const formData = new URLSearchParams({
+            m: '0',
+            do: '',
+            username: email,
+            [formName!]: password
+        });
 
-    const csrfToken = homeResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
+        const postLoginResponse = await postRequest(domain, '/login', formData, {
+            Cookie: `${lastviewed}; enjin_browsertype=web; ${cf_bm_token}`,
+        }, '/authenticateSite');
 
-    const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), './config.json')).toString());
-    config.siteAuth = { phpSessID, csrfToken };
-    fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
+        const phpSessID = postLoginResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('PHPSESSID'))!.split(';')[0];
 
-    statusMessage(MessageType.Completion, `Authenticated with PHPSESSID and CSRF token`);
-    return { phpSessID, csrfToken };
+        const homeResponse = await getRequest(domain, '/', {
+            Cookie: `${lastviewed}; ${phpSessID}; enjin_browsertype=web; ${cf_bm_token}; login_temp=1`,
+        }, '/authenticateSite/homeResponse');
+
+        const csrfToken = homeResponse.headers['set-cookie']!.find((cookie: string) => cookie.includes('csrf_token'))!.split(';')[0];
+
+        const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), './config.json')).toString());
+        config.siteAuth = { phpSessID, csrfToken };
+        fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
+
+        statusMessage(MessageType.Completion, `Authenticated with PHPSESSID and CSRF token`);
+        return { phpSessID, csrfToken };
+    } catch (error) {
+        statusMessage(MessageType.Error, `Error authenticating: ${getErrorMessage(error)}`);
+        statusMessage(MessageType.Info, 'This seriously limit the info we can scrape from the site.');
+        statusMessage(MessageType.Info, 'If you have 2FA enabled, you should disable it and try again later.');
+        await booleanPromptUser('Do you still want to continue?')
+
+        return null;
+    }
 }
 
 export async function getSiteID(domain: string): Promise<string> {
@@ -73,4 +107,14 @@ export async function getSiteID(domain: string): Promise<string> {
     const { result } = data;
 
     return result.latest_user.site_id;
+}
+
+export async function isSiteAdmin(domain: string, siteAuth: SiteAuth): Promise<boolean> {
+    const adminResponse = await getRequest(domain, '/admin', {
+        Cookie: `${siteAuth.phpSessID}; enjin_browsertype=web; ${siteAuth.csrfToken}`,
+    }, '/isSiteAdmin');
+
+    const $ = cheerio.load(adminResponse.data);
+
+    return !($('.header_text_text').text() === 'Error');
 }

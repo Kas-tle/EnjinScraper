@@ -4,7 +4,7 @@ import packageJson from './package.json';
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory } from './src/util/files';
 import { databaseConnection, initializeTables, insertRow, isModuleScraped, queryModuleIDs } from './src/util/database';
-import { authenticateAPI, authenticateSite, getSiteID } from './src/scrapers/authenticate';
+import { authenticateAPI, authenticateSite, getSiteID, isSiteAdmin } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
@@ -36,6 +36,15 @@ async function main(): Promise<void> {
     // Login to site and get PHPSESSID and csrf_token
     const siteAuth = config.siteAuth ? config.siteAuth : await authenticateSite(config.domain, config.email, config.password);
 
+    // Check if we are admin
+    let adminMode: boolean = true;
+    if (siteAuth !== null && config.adminMode !== false) {
+        adminMode = await isSiteAdmin(config.domain, siteAuth);
+    } else {
+        adminMode = false;
+    }
+    statusMessage(MessageType.Info, `Admin Mode: ${adminMode}`);
+
     // Get site ID
     const siteID = await getSiteID(config.domain);
     statusMessage(MessageType.Info, `Site ID: ${siteID}`);
@@ -48,7 +57,7 @@ async function main(): Promise<void> {
     await initializeTables(database);
 
     // Notifier Mode
-    if (config.notifier && config.notifier.enabled === true) {
+    if (siteAuth != null && config.notifier && config.notifier.enabled === true && config.apiKey) {
         await startNotifier(database, config.domain, config.apiKey, siteAuth, config.notifier.messageSubject, config.notifier.messageBody);
         deleteFiles(['./target/recovery/notifier_progress.json']);
     }
@@ -56,7 +65,7 @@ async function main(): Promise<void> {
     // Get site data
     if (await isModuleScraped(database, 'site_data')) {
         statusMessage(MessageType.Critical, 'Site data already scraped, moving on...');
-    } else {
+    } else if (siteAuth != null && adminMode) {
         await getSiteData(config.domain, siteAuth, database, siteID);
         await insertRow(database, 'scrapers', 'site_data', true);
     }
@@ -70,17 +79,20 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'HTML module disabled, skipping forum scraping...');
     } else if (await isModuleScraped(database, 'html')) {
         statusMessage(MessageType.Critical, 'HTML already scraped, skipping forum scraping...');
-    } else {
+    } else if (siteAuth != null && adminMode) {
         statusMessage(MessageType.Info, 'Scraping HTML modules...');
         await getHTMLModules(config.domain, siteAuth, database, htmlModuleIDs);
         await insertRow(database, 'scrapers', 'html', true);
         deleteFiles(['./target/recovery/html_progress.json']);
         statusMessage(MessageType.Completion, 'Finished HTML module scraping');
+    } else {
+        statusMessage(MessageType.Info, 'Cannot scrape HTML modules without admin credentials, skipping...');
     }
 
     // Get forums
     let forumModuleIDs = await queryModuleIDs(database, 'forum');
     config.excludeForumModuleIDs ? forumModuleIDs.filter(id => !config.excludeForumModuleIDs?.includes(id)) : {};
+    config.manualForumModuleIDs && config.manualForumModuleIDs.length > 0 ? forumModuleIDs.push(...config.manualForumModuleIDs) : {};
     if (forumModuleIDs.length === 0) {
         statusMessage(MessageType.Critical, 'No forum module IDs for site, skipping forum scraping...');
     } else if (config.disabledModules?.forums) {
@@ -110,6 +122,7 @@ async function main(): Promise<void> {
     // Get wikis
     let wikiModuleIDs = await queryModuleIDs(database, 'wiki');
     config.excludedWikiModuleIDs ? wikiModuleIDs.filter(id => !config.excludedWikiModuleIDs?.includes(id)) : {};
+    config.manualWikiModuleIDs && config.manualWikiModuleIDs.length > 0 ? wikiModuleIDs.push(...config.manualWikiModuleIDs) : {};
     if (wikiModuleIDs.length === 0) {
         statusMessage(MessageType.Critical, 'No wiki module IDs for site, skipping wiki scraping...');
     } else if (config.disabledModules?.wikis) {
@@ -127,6 +140,7 @@ async function main(): Promise<void> {
     // Get news
     let newsModuleIDs = await queryModuleIDs(database, 'news');
     config.excludeNewsModuleIDs ? newsModuleIDs.filter(id => !config.excludeNewsModuleIDs?.includes(id)) : {};
+    config.manualNewsModuleIDs && config.manualNewsModuleIDs.length > 0 ? newsModuleIDs.push(...config.manualNewsModuleIDs) : {};
     if (newsModuleIDs.length === 0) {
         statusMessage(MessageType.Critical, 'No news module IDs for site, skipping news scraping...');
     } else if (config.disabledModules?.news) {
@@ -149,7 +163,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Info, 'Scraping application responses...');
         await getApplicationResponses(database, config.domain, sessionID, siteAuth, siteID);
         statusMessage(MessageType.Info, 'Scraping applications...');
-        await getApplications(database, config.domain, siteAuth);
+        siteAuth ? await getApplications(database, config.domain, siteAuth) : {};
         await insertRow(database, 'scrapers', 'applications', true);
         deleteFiles(['./target/recovery/remaining_applications.json', './target/recovery/application_ids.json']);
         statusMessage(MessageType.Completion, 'Finished application scraping');
@@ -162,7 +176,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Comments already scraped, skipping comment scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping comments...');
-        await getComments(database, config.domain, siteAuth)
+        siteAuth ? await getComments(database, config.domain, siteAuth) : {};
         await insertRow(database, 'scrapers', 'comments', true);
         deleteFiles(['./target/recovery/comments.json']);
         statusMessage(MessageType.Completion, 'Finished comment scraping');
@@ -175,7 +189,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Tickets already scraped, skipping ticket scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping tickets...');
-        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth, config.excludeTicketModuleIDs ?? null);
+        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth, adminMode, config.excludeTicketModuleIDs ?? null, config.manualTicketModuleIDs ?? null);
         await insertRow(database, 'scrapers', 'tickets', true);
         deleteFiles(['./target/recovery/module_tickets.json']);
         statusMessage(MessageType.Completion, 'Finished ticket scraping');
@@ -190,7 +204,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Info, 'Scraping users...');
         await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users);
         await insertRow(database, 'scrapers', 'users', true);
-        await isModuleScraped(database, 'user_data') ? {} : await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users);
+        await isModuleScraped(database, 'user_data') ? {} : await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users, adminMode);
         await insertRow(database, 'scrapers', 'user_data', true);
         deleteFiles(['./target/recovery/user_tags.json', './target/recovery/user_data.json']);
         statusMessage(MessageType.Completion, 'Finished user scraping');
@@ -212,7 +226,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Info, 'Scraping files...');
         const disabledFileModules = config.disabledModules?.files;
         if (!await isModuleScraped(database, 's3_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.s3) : true)) {
-            await getS3Files(config.domain, database, siteAuth, siteID);
+            await getS3Files(config.domain, database, siteAuth, siteID, adminMode);
             await insertRow(database, 'scrapers', 's3_files', true);
         }
         if (!await isModuleScraped(database, 'wiki_files') && ((typeof disabledFileModules === 'object') ? !(disabledFileModules.wiki) : true)) {
