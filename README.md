@@ -6,6 +6,9 @@ For support, please join the support Discord: https://discord.gg/2SfGAMskWt.
 
 ## Usage
 
+> **Warning**
+> **If you have 2 factor authentication enabled on your Enjin account, you must either disable it or make a temporary sitewide admin account without 2FA to run this tool!**
+
 Note that this is still a work in progress and as such installation and usage requires manual installation of dependencies and configuration of the `config.json` file. When done, I may opt to publish as a global npm package or distribute as a CLI electron app.
 
 ### Quick Run With NPX
