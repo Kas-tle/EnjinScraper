@@ -1,7 +1,7 @@
 import { Database } from "sqlite3";
 import { getUsers } from "../scrapers/users";
 import { MessageType, statusMessage } from "./console";
-import { isModuleScraped } from "./database";
+import { insertRow, isModuleScraped } from "./database";
 import { SiteAuth } from "../interfaces/generic";
 import { fileExists, parseJsonFile } from "./files";
 import { addExitListeners, removeExitListeners } from "./exit";
@@ -43,7 +43,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
 
     const totalUsers = users.length;
 
-    statusMessage(MessageType.Info, `Sending messages to ${totalUsers} users... Estimated time: ${totalUsers - userCount[0] * 21 / 3600} hours`);
+    statusMessage(MessageType.Info, `Sending messages to ${totalUsers} users... Estimated time: ${(totalUsers - userCount[0]) * 21 / 3600} hours`);
 
     for (let i = userCount[0]; i < totalUsers; i++) {
         const pmRequest = await enjinRequest<Messages.SendMessage> ({
@@ -56,11 +56,35 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         })
 
         if (pmRequest.error) {
-            statusMessage(MessageType.Error, `Error sending message to ${users[i].user_id} ${users[i].username}: ${pmRequest.error}`);
+            statusMessage(MessageType.Error, `Error sending message to ${users[i].user_id} ${users[i].username}: ${pmRequest.error.code}, ${pmRequest.error.message}`);
             statusMessage(MessageType.Process, `Skipping ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
             if (pmRequest.error.message.startsWith('This user has chosen to only')) {
-                // statusMessage(MessageType.Plain, 'Attempting to post on wall instead...');
-                // Logic to post on wall here
+                await insertRow(database, 'private_users', users[i].user_id, users[i].username);
+            } else {
+                const match = pmRequest.error.message.match(/Please wait (\d+) (\w+) before sending another message\./)
+                if (match) {
+                    const time = parseInt(match[1]);
+                    const unit = match[2];
+                    let timeInMilliseconds = 0;
+                  
+                    if (unit === "seconds" || unit === "second") {
+                      timeInMilliseconds = time * 1000;
+                    } else if (unit === "minutes" || unit === "minute") {
+                      timeInMilliseconds = time * 60 * 1000;
+                    } else if (unit === "hours" || unit === "hour") {
+                      timeInMilliseconds = time * 60 * 60 * 1000;
+                    } else {
+                        statusMessage(MessageType.Error, `Did not expect unit ${unit}... Exiting...`);
+                        process.kill(process.pid, 'SIGINT');
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, timeInMilliseconds + 1000));
+
+                    // Retry the user.
+                    i--;
+                    continue;
+                } else {
+                    process.kill(process.pid, 'SIGINT');
+                }
             }
             await new Promise((resolve) => setTimeout(resolve, 21000));
             continue;
