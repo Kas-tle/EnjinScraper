@@ -880,4 +880,13 @@ export const tableSchemas: TableSchema[] = [
             'dirPath TEXT',
         ]
     },
+
+    // Notifier
+    {
+        name: 'private_users',
+        schema: [
+            'user_id TEXT PRIMARY KEY',
+            'username TEXT',
+        ],
+    },
 ];
