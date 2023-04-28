@@ -75,8 +75,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
         }
     }
     statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
-    process.kill(process.pid, 'SIGINT');
-    return Promise.reject();
+    throw new Error('Must exit now!');
 }
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
