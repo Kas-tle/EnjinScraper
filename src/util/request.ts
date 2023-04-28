@@ -48,7 +48,11 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
             } else if (error.response && error?.response.status === 403) {
                 statusMessage(MessageType.Critical, `File is not available for download (403 Forbidden)`);
                 statusMessage(MessageType.Critical, `Attempt [(${retries+1}/${retryTimes+1})]`);
-                return Promise.reject();
+                return Promise.reject();            
+            } else if (error.response && error?.response.status === 405) {
+                    statusMessage(MessageType.Critical, `Enjin API returned method not allowed (405 Method not allowed)`);
+                    statusMessage(MessageType.Critical, `Attempt [(${retries+1}/${retryTimes+1})]`);
+                    return Promise.reject();
             } else if (error.response && error?.response.status === 524) {
                 statusMessage(MessageType.Critical, `Enjin took too long to respond per Cloudflare's 100 second limit (524 a timeout occurred) Retrying...`);
                 statusMessage(MessageType.Critical, `Attempt [(${retries+1}/${retryTimes+1})]`);
@@ -71,8 +75,7 @@ export async function enjinRequest<T>(params: Params, method: string, domain: st
         }
     }
     statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
-    process.kill(process.pid, 'SIGINT');
-    return Promise.reject();
+    throw new Error('Must exit now!');
 }
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0';
