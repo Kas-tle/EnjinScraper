@@ -7,7 +7,15 @@ For support, please join the support Discord: https://discord.gg/2SfGAMskWt.
 ## Usage
 
 > **Warning**
-> **If you have 2 factor authentication enabled on your Enjin account, you must either disable it or make a temporary sitewide admin account without 2FA to run this tool!**
+> **If you have 2 factor authentication enabled on your Enjin account, you must either disable it or make a temporary account without 2FA to run this tool!**
+
+To scrape all data the tool can scrape, the account must be a sitewide admin or owner account.
+
+EnjinScraper will now do its best even if you can't provide an API key or a site admin account. At minimum, a regular site account is still needed. There's still of course some limits to this, but I've done my best to include as much as I can. Note there's still a few minor things I have to add to it when it works in this mode, such as it seemingly not getting forum images properly and perhaps a way for it to get application questions. These things are normally handled by the admin panel, but obviously some users trying to archive sites they don't own don't have this luxury. Best of luck to everyone!
+
+To use this mode, you will have to manually provide the module IDs of forums, news, and wiki modules you wish to scrape. This will be the first number found in the URL when on any page of one of these modules. For example, here: `https://www.megacrafting.com/forum/m/4627724/viewthread/9364148-mejinxx-application` the forum module ID is `4627724`. These should be specified as an array of strings under `manualForumModuleIDs`.
+
+> Note: if you've already scraped with a site admin account and api key, this update does not provide any additional data.
 
 ### Quick Run With NPX
 
@@ -42,6 +50,19 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "domain": "www.example.com", // Required
     "email": "someemail@email.com", // Required
     "password": "somepassword", // Required
+    "adminMode": true,
+    "excludeHTMLModuleIDs": [
+        "1000001",
+        "1000002"
+    ],
+    "excludeForumModuleIDs": [],
+    "excludeNewsModuleIDs": [],
+    "excludeTicketModuleIDs": [],
+    "excludedWikiModuleIDs": [],
+    "manualForumModuleIDs": [],
+    "manualNewsModuleIDs": [],
+    "manualTicketModuleIDs": [],
+    "manualWikiModuleIDs": [],
     "disabledModules": {
         "html": false,
         "forums": false,
