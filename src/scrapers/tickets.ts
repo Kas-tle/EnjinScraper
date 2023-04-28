@@ -241,15 +241,15 @@ async function getTicketUploads(domain: string, siteAuth: SiteAuth, ticketCode: 
     return uploads;
 }
 
-export async function getAllTickets(database: Database, domain: string, apiKey: string | null, sessionID: string, siteAuth: SiteAuth | null, adminMode: boolean, excludedModules: string[] | null, manualModules: string[] | null) {
+export async function getAllTickets(database: Database, domain: string, apiKey: string | null, sessionID: string, siteAuth: SiteAuth | null, adminMode: boolean, excludedModules: string[] | null, addedModules: string[] | null) {
     let modules: string[] = [];
     if (fileExists('./target/recovery/module_tickets.json')) {
         modules = [];
     } else if (apiKey) {
         modules = await getTicketModules(database, domain, apiKey);
     }
-    manualModules ? modules = modules.concat(manualModules) : {};
+    addedModules ? modules = modules.concat(addedModules) : {};
     excludedModules ? modules = modules.filter(module => !excludedModules.includes(module)) : {};
     statusMessage(MessageType.Info, `Found ${modules.length} ticket modules: ${modules.join(', ')}`);
-    await getTicketsByModule(database, domain, sessionID, siteAuth, modules, adminMode);
+    await getTicketsByModule(database, domain, sessionID, siteAuth, [...new Set(modules)], adminMode);
 }

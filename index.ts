@@ -101,7 +101,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Forums already scraped, skipping forum scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping forums...');
-        await getForums(database, config.domain, sessionID, forumModuleIDs);
+        await getForums(database, config.domain, sessionID, [...new Set(forumModuleIDs)]);
         await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
         statusMessage(MessageType.Completion, 'Finished forum scraping');
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Wikis already scraped, skipping wiki scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping wikis...');
-        await getWikis(config.domain, database, wikiModuleIDs);
+        await getWikis(config.domain, database, [...new Set(wikiModuleIDs)]);
         await insertRow(database, 'scrapers', 'wikis', true);
         deleteFiles(['./target/recovery/wiki_progress.json']);
         statusMessage(MessageType.Completion, 'Finished wiki scraping');
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'News already scraped, skipping news scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping news...');
-        await getNews(database, config.domain, sessionID, siteAuth, newsModuleIDs);
+        await getNews(database, config.domain, sessionID, siteAuth, [...new Set(newsModuleIDs)]);
         await insertRow(database, 'scrapers', 'news', true);
         statusMessage(MessageType.Completion, 'Finished news scraping');
     }
@@ -183,13 +183,15 @@ async function main(): Promise<void> {
     }
 
     // Get tickets
+    let ticketModuleIDs = await queryModuleIDs(database, 'tickets');
+    config.manualTicketModuleIDs && config.manualTicketModuleIDs.length > 0 ? ticketModuleIDs.push(...config.manualTicketModuleIDs) : {};
     if (config.disabledModules?.tickets) {
         statusMessage(MessageType.Critical, 'Tickets module disabled, skipping ticket scraping...');
     } else if (await isModuleScraped(database, 'tickets')) {
         statusMessage(MessageType.Critical, 'Tickets already scraped, skipping ticket scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping tickets...');
-        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth, adminMode, config.excludeTicketModuleIDs ?? null, config.manualTicketModuleIDs ?? null);
+        await getAllTickets(database, config.domain, config.apiKey, sessionID, siteAuth, adminMode, config.excludeTicketModuleIDs ?? null, ticketModuleIDs ?? null);
         await insertRow(database, 'scrapers', 'tickets', true);
         deleteFiles(['./target/recovery/module_tickets.json']);
         statusMessage(MessageType.Completion, 'Finished ticket scraping');
