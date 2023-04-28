@@ -17,7 +17,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
     await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
 
     const disableUserParams = {ips: true, tags: true, fullinfo: true, characters: true, games: true, photos: true, wall: true};
-    await isModuleScraped(database, 'users') ? {} : await getUsers(database, domain, apiKey, disableUserParams);
+    await isModuleScraped(database, 'users') ? {} : await getUsers(database, domain, apiKey, disableUserParams, []);
 
     const users: { user_id: string, username: string }[] = await new Promise((resolve, reject) => {
         database.all(`SELECT user_id, username FROM users`,

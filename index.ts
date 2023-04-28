@@ -204,7 +204,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Users already scraped, skipping user tag scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping users...');
-        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users);
+        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users, config.manualUserIDs ?? []);
         await insertRow(database, 'scrapers', 'users', true);
         await isModuleScraped(database, 'user_data') ? {} : await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users, adminMode);
         await insertRow(database, 'scrapers', 'user_data', true);

@@ -20,6 +20,7 @@ export interface Config {
     manualNewsModuleIDs?: string[];
     manualTicketModuleIDs?: string[];
     manualWikiModuleIDs?: string[];
+    manualUserIDs?: string[];
     disabledModules: {
         html: boolean;
         forums: boolean;
@@ -75,6 +76,7 @@ const defaultConfig: Config = {
     manualNewsModuleIDs: [],
     manualTicketModuleIDs: [],
     manualWikiModuleIDs: [],
+    manualUserIDs: [],
     disabledModules: {
         html: false,
         forums: false,

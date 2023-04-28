@@ -377,9 +377,10 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
     removeExitListeners();
 }
 
-export async function getUsers(database: Database, domain: string, apiKey: string | null, disabledUserModules: Config["disabledModules"]["users"]) {
+export async function getUsers(database: Database, domain: string, apiKey: string | null, disabledUserModules: Config["disabledModules"]["users"], manualUserIDs: string[]) {
     const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : false);
     const userDB: UsersDB[] = [];
+    const userIDs: string[] = [];
 
     if (apiKey !== null) {
         let result: UserAdmin.Get = {};
@@ -431,7 +432,6 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
             }
         } while (Object.keys(result).length > 0);
     } else {
-        const userIDs: string[] = [];
         userIDs.push(...await getColumnUsers(database, 'forums', 'thread_lastpost_user_id'));
         userIDs.push(...await getColumnUsers(database, 'forums'));
         userIDs.push(...await getColumnUsers(database, 'threads', 'thread_user_id'));
@@ -445,9 +445,12 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
         userIDs.push(...await getColumnUsers(database, 'application_responses'));
         userIDs.push(...await getColumnUsers(database, 'application_responses', 'admin_user_id'));
         userIDs.push(...await getColumnUsers(database, 'comments'));
+    }
 
-        const uniqueUserIDs = [...new Set(userIDs)];
+    userIDs.push(...manualUserIDs);
+    const uniqueUserIDs = [...new Set(userIDs)];
 
+    if (uniqueUserIDs.length > 0) {
         for (const userID of uniqueUserIDs) {
             userDB.push([
                 userID,
@@ -470,9 +473,8 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                 null
             ]);
         }
+        await insertRows(database, 'users', userDB);
     }
-
-    await insertRows(database, 'users', userDB);
 }
 
 async function getColumnUsers(database: Database, table: string, column='user_id'): Promise<string[]> {

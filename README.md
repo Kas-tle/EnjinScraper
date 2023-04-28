@@ -63,6 +63,7 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "manualNewsModuleIDs": [],
     "manualTicketModuleIDs": [],
     "manualWikiModuleIDs": [],
+    "manualUserIDs": [],
     "disabledModules": {
         "html": false,
         "forums": false,
