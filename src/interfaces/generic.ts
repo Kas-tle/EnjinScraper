@@ -50,3 +50,10 @@ export interface SiteAuth {
     phpSessID: string;
     csrfToken: string;
 }
+
+export interface Account {
+    email: string;
+    password: string;
+    sessionID?: string;
+    siteAuth?: SiteAuth;
+}

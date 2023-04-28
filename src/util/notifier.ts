@@ -7,6 +7,7 @@ import { fileExists, parseJsonFile } from "./files";
 import { addExitListeners, removeExitListeners } from "./exit";
 import { enjinRequest } from "./request";
 import { Messages } from "../interfaces/messages";
+import { writeJsonFile } from "./files";
 
 export async function startNotifier(database: Database, domain: string, apiKey: string, siteAuths: SiteAuth[], messageSubject: string, messageBody: string) {
     statusMessage(MessageType.Info, 'Running in notifier mode...');
@@ -74,13 +75,17 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         if (delay > 0) {
             statusMessage(MessageType.Process, `Waiting ${delay / 1000} seconds before sending next message...`);
             await new Promise<void>(resolve => setTimeout(() => resolve(), delay));
+        } else if (i == 0) {
+            statusMessage(MessageType.Process, `Waiting 21 seconds before sending next message...`);
+            await new Promise<void>(resolve => setTimeout(() => resolve(), 21000));
         }
         
         // Select the site auth with this auth id
         const siteAuth = siteAuths[authId % siteAuths.length];
 
-        userCount = [i]
-        const pmRequest = await enjinRequest<Messages.SendMessage> ({
+        userCount = [i];
+        writeJsonFile('./target/recovery/notifier_progress.json', [userCount]);
+        /*const pmRequest = await enjinRequest<Messages.SendMessage> ({
             recipients: [users[i].user_id],
             message_subject: messageSubject,
             message_body: messageBody.replace('{USERNAME}', users[i].username),
@@ -127,7 +132,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
             // Set the rate-limit to 21 seconds for this auth as to avoid spamming the API
             rateLimits[authId] = new Date(Date.now() + 21000);
             continue;
-        }
+        }*/
 
         // Set the rate-limit to 21 seconds for auth as to avoid spamming the API
         rateLimits[authId] = new Date(Date.now() + 21000);
