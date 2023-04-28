@@ -261,6 +261,7 @@ export const tableSchemas: TableSchema[] = [
             'user_votes TEXT',
             'user_posts TEXT',
             'url TEXT',
+            'post_user_ip TEXT',
         ],
     },
 

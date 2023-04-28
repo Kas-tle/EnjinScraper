@@ -1,10 +1,13 @@
+import * as cheerio from 'cheerio';
 import { Database } from 'sqlite3';
 import { Forum, ForumStats, ForumsDB, Notice, NoticeEntry, PostsDB, ThreadPosts, ThreadsDB } from '../interfaces/forum';
 import { addExitListeners, removeExitListeners } from '../util/exit';
 import { fileExists, parseJsonFile } from '../util/files';
-import { enjinRequest } from '../util/request';
+import { enjinRequest, getRequest } from '../util/request';
 import { insertRow, insertRows, updateRow } from '../util/database';
 import { MessageType, statusMessage } from '../util/console';
+import { SiteAuth } from '../interfaces/generic';
+import { Config } from '../util/config';
 
 async function getModuleForumIDs(database: Database, domain: string, sessionID: string, forumModuleID: string): Promise<string[][]> {
     // Write forum_modules table and forums table
@@ -246,7 +249,7 @@ async function getForumThreadIDs(database: Database, domain: string, sessionID: 
     return threadIDs;
 }
 
-async function getThreadContent(database: Database, domain: string, sessionID: string, threadID: string[]) {
+async function getThreadContent(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth | null, threadID: string[], disabledForumModules: Config["disabledModules"]["forums"]) {
     // Create posts table and update threads table
     let page = 1;
     let totalPages = 1;
@@ -288,6 +291,26 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
         }
 
         const postsDB: PostsDB[] = [];
+		const userIPs: Record<string, string | null> = {};
+		
+		if(siteAuth && ((typeof disabledForumModules === 'object') ? !(disabledForumModules.postIPs) : false)){
+			statusMessage(MessageType.Process, `Obtaining post IPs for thread ${threadID[2]} in page ${page}.`)
+			const urlArr = thread.url_cms.split('/m/')
+			const url = `${urlArr[0]}/page/${page}/m/${urlArr[1]}`
+		
+			const applicationResponse = await getRequest('', url, {
+				Cookie: `${siteAuth.phpSessID}; ${siteAuth.csrfToken}`,
+				Referer: `Referer ${url}`
+			}, '/getPostsIP');
+
+			const $ = cheerio.load(applicationResponse.data);
+			const ipBlock = $('.ip-popup');
+			ipBlock.each((_index, element) => {
+				const post_ip: string | null = $(element).attr('data-ip') ?? null;
+				const post_id = $(element).attr('data-id') ?? -1;
+				userIPs[post_id] = post_ip;
+			});
+		}
 
         for (const post of posts) {
             postsDB.push(
@@ -312,7 +335,8 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
                     post.user_online,
                     post.user_votes,
                     post.user_posts,
-                    post.url
+                    post.url,
+                    userIPs ? userIPs[post.post_id] : null
                 ]
             )
         }
@@ -336,7 +360,7 @@ interface ForumContent {
     }
 }
 
-export async function getForums(database: Database, domain: string, sessionID: string, forumModuleIDs: string[]): Promise<ForumContent> {
+export async function getForums(database: Database, domain: string, sessionID: string, siteAuth: SiteAuth | null, forumModuleIDs: string[], disabledForumModules: Config["disabledModules"]["forums"]): Promise<ForumContent> {
     let forumContent: ForumContent = {};
     let forumIDs: string[][] = [];
     let threadIDs: string[][] = [];
@@ -385,7 +409,7 @@ export async function getForums(database: Database, domain: string, sessionID: s
     const totalThreads = threadIDs.length;
 
     for (let i = threadCount[0]; i < totalThreads; i++) {
-        await getThreadContent(database, domain, sessionID, threadIDs[i]);
+        await getThreadContent(database, domain, sessionID, siteAuth, threadIDs[i], disabledForumModules);
         statusMessage(MessageType.Process, `Found all forum content for thread ${threadIDs[i][2]}... [(${++threadCount[0]}/${totalThreads})]`)
     }
 

@@ -23,7 +23,9 @@ export interface Config {
     manualUserIDs?: string[];
     disabledModules: {
         html: boolean;
-        forums: boolean;
+        forums: boolean | {
+            postIPs: boolean;
+		};
         galleries: boolean;
         news: boolean;
         wikis: boolean;
@@ -79,7 +81,9 @@ const defaultConfig: Config = {
     manualUserIDs: [],
     disabledModules: {
         html: false,
-        forums: false,
+        forums: {
+            postIPs: true,
+		},
         galleries: false,
         news: false,
         wikis: false,
