@@ -5,6 +5,7 @@ import { fileExists, parseJsonFile } from '../util/files';
 import { enjinRequest } from '../util/request';
 import { insertRow, insertRows, updateRow } from '../util/database';
 import { MessageType, statusMessage } from '../util/console';
+import { getErrorMessage } from '../util/error';
 
 async function getModuleForumIDs(database: Database, domain: string, sessionID: string, forumModuleID: string): Promise<string[][]> {
     // Write forum_modules table and forums table
@@ -252,77 +253,89 @@ async function getThreadContent(database: Database, domain: string, sessionID: s
     let totalPages = 1;
 
     do {
-        statusMessage(MessageType.Process, `Getting thread ${threadID[2]} page ${page}...`)
-        const params = {
-            thread_id: threadID[2],
-            session_id: sessionID,
-            page: page.toString(),
-        }
-        const data = await enjinRequest<Forum.GetThread>(params, 'Forum.getThread', domain);
-
-        if (data.error) {
-            statusMessage(MessageType.Error, `Error getting thread ${threadID[2]} page ${page}: ${data.error.code} ${data.error.message}`)
-            break;
-        }
-
-        const { thread, posts } = data.result;
-
-        if (page === 1) {
-            await updateRow(
-                database,
-                'threads',
-                'thread_id',
-                thread.thread_id,
-                [
-                    'thread_user_id', 'thread_username', 'thread_avatar', 'thread_lastpost_user_id', 'thread_lastpost_username',
-                    'thread_moved_id', 'thread_post_time', 'url', 'post_count', 'forum_name', 'forum_description',
-                    'disable_voting', 'show_signature', 'url_cms'
-                ],
-                [
-                    thread.thread_user_id, thread.thread_username, thread.thread_avatar, thread.thread_lastpost_user_id,
-                    thread.thread_lastpost_username, thread.thread_moved_id, thread.thread_post_time, thread.url,
-                    thread.post_count, thread.forum_name, thread.forum_description, thread.disable_voting,
-                    thread.show_signature, thread.url_cms
-                ]
-            )
-        }
-
-        const postsDB: PostsDB[] = [];
-
-        for (const post of posts) {
-            postsDB.push(
-                [
+        try {
+            statusMessage(MessageType.Process, `Getting thread ${threadID[2]} page ${page}...`)
+            const params = {
+                thread_id: threadID[2],
+                session_id: sessionID,
+                page: page.toString(),
+            }
+            const data = await enjinRequest<Forum.GetThread>(params, 'Forum.getThread', domain);
+    
+            if (data.error) {
+                statusMessage(MessageType.Error, `Error getting thread ${threadID[2]} page ${page}: ${data.error.code} ${data.error.message}`)
+                break;
+            }
+    
+            const { thread, posts } = data.result;
+    
+            if (page === 1) {
+                await updateRow(
+                    database,
+                    'threads',
+                    'thread_id',
                     thread.thread_id,
-                    post.post_id,
-                    post.post_time,
-                    post.post_content,
-                    post.post_content_html,
-                    post.post_content_clean,
-                    post.post_user_id,
-                    post.show_signature,
-                    post.last_edit_time,
-                    post.post_votes,
-                    post.post_unhidden,
-                    post.post_admin_hidden,
-                    post.post_locked,
-                    post.last_edit_user,
-                    post.votes ? JSON.stringify(post.votes) : null,
-                    post.post_username,
-                    post.avatar,
-                    post.user_online,
-                    post.user_votes,
-                    post.user_posts,
-                    post.url
-                ]
-            )
-        }
+                    [
+                        'thread_user_id', 'thread_username', 'thread_avatar', 'thread_lastpost_user_id', 'thread_lastpost_username',
+                        'thread_moved_id', 'thread_post_time', 'url', 'post_count', 'forum_name', 'forum_description',
+                        'disable_voting', 'show_signature', 'url_cms'
+                    ],
+                    [
+                        thread.thread_user_id, thread.thread_username, thread.thread_avatar, thread.thread_lastpost_user_id,
+                        thread.thread_lastpost_username, thread.thread_moved_id, thread.thread_post_time, thread.url,
+                        thread.post_count, thread.forum_name, thread.forum_description, thread.disable_voting,
+                        thread.show_signature, thread.url_cms
+                    ]
+                )
+            }
+    
+            const postsDB: PostsDB[] = [];
+    
+            for (const post of posts) {
+                postsDB.push(
+                    [
+                        thread.thread_id,
+                        post.post_id,
+                        post.post_time,
+                        post.post_content,
+                        post.post_content_html,
+                        post.post_content_clean,
+                        post.post_user_id,
+                        post.show_signature,
+                        post.last_edit_time,
+                        post.post_votes,
+                        post.post_unhidden,
+                        post.post_admin_hidden,
+                        post.post_locked,
+                        post.last_edit_user,
+                        post.votes ? JSON.stringify(post.votes) : null,
+                        post.post_username,
+                        post.avatar,
+                        post.user_online,
+                        post.user_votes,
+                        post.user_posts,
+                        post.url
+                    ]
+                )
+            }
+    
+            if (postsDB && postsDB.length > 0) {
+                await insertRows(database, 'posts', postsDB);
+            }
+    
+            totalPages = data.result.pages;
+            page++;
+        } catch (error) {
+            statusMessage(MessageType.Error, `Error downloading thread ${threadID[2]} page ${page}: ${getErrorMessage(error)}`)
+            statusMessage(MessageType.Error, `Skipping thread ${threadID[2]} page ${page}`)
 
-        if (postsDB && postsDB.length > 0) {
-            await insertRows(database, 'posts', postsDB);
+            if (page && totalPages && page < totalPages) {
+                page++;
+                continue;
+            } else {
+                break;
+            }
         }
-
-        totalPages = data.result.pages;
-        page++;
     } while (page <= totalPages);
 
     statusMessage(MessageType.Process, `Finished getting all pages for thread ${threadID[2]}.`)

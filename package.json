@@ -1,6 +1,6 @@
 {
     "name": "enjinscraper",
-    "version": "1.6.3",
+    "version": "1.6.4",
     "description": "Scrapes an Enjin site via the Enjin API",
     "repository": "https://github.com/Kas-tle/EnjinScraper.git",
     "author": "Joshua Castle <packages@kastle.dev",
