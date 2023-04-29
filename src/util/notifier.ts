@@ -100,7 +100,8 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
                 await insertRow(database, 'private_users', users[i].user_id, users[i].username);
                 statusMessage(MessageType.Process, `Skipping ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
             } else {
-                const match = pmRequest.error.message.match(/Please wait (\d+) (\w+) before sending another message\./)
+                const match = pmRequest.error.message.match(/Please wait (\d+) (\w+) before sending another message\./);
+                const dailyLimitMatch = pmRequest.error.message.match(/You have reached your daily message limit, please try again tomorrow\./);
                 if (match) {
                     const time = parseInt(match[1]);
                     const unit = match[2];
@@ -125,6 +126,14 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
                     i--;
                     
                     continue;
+                } else if (dailyLimitMatch) {
+                    statusMessage(MessageType.Process, `Auth ${authId} rate-limited for the day. Setting a 1-hour cooldown. Trying ${users[i].user_id} ${users[i].username} again...`);
+
+                    // Add the rate-limit to the auth
+                    rateLimits[authId] = new Date(Date.now() + 60 * 60 * 1000);
+
+                    // Retry the user.
+                    i--;
                 } else {
                     process.kill(process.pid, 'SIGINT');
                 }
