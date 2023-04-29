@@ -82,7 +82,8 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
             "characters": true,
             "games": true,
             "photos": true,
-            "wall": true
+            "wall": true,
+            "yourFriends": true
         },
         "files": {
             "s3": false,

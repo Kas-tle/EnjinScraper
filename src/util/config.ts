@@ -40,6 +40,7 @@ export interface Config {
             games: boolean;
             photos: boolean;
             wall: boolean;
+            yourFriends: boolean;
         };
         files: boolean | {
             s3: boolean;
@@ -98,6 +99,7 @@ const defaultConfig: Config = {
             games: true,
             photos: true,
             wall: true,
+            yourFriends: false,
         },
         files: {
             s3: false,

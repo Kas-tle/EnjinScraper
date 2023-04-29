@@ -14,7 +14,7 @@ export interface Params {
     preset_id? : string;
     session_id? : string;
     forum_id? : string;
-    page? : string;
+    page? : string | number;
     thread_id? : string;
     api_key? : string;
     ticket_code? : string;

@@ -11,6 +11,7 @@ import { MessageType, statusMessage } from '../util/console';
 import { Config } from '../util/config';
 import { Profile } from '../interfaces/profile';
 import { getErrorMessage } from '../util/error';
+import { Friends } from '../interfaces/friends';
 
 export async function getAdditionalUserData(domain: string, sessionID: string, siteAuth: SiteAuth | null, database: Database, disabledUserModules: Config["disabledModules"]["users"], adminMode: boolean) {
     statusMessage(MessageType.Info, 'Getting additional user data...')
@@ -383,7 +384,7 @@ export async function getAdditionalUserData(domain: string, sessionID: string, s
     removeExitListeners();
 }
 
-export async function getUsers(database: Database, domain: string, apiKey: string | null, disabledUserModules: Config["disabledModules"]["users"], manualUserIDs: string[]) {
+export async function getUsers(database: Database, domain: string, sessionID: string, apiKey: string | null, disabledUserModules: Config["disabledModules"]["users"], manualUserIDs: string[]) {
     const allUserTags = await getAllUserTags(domain, apiKey, (typeof disabledUserModules === 'object') ? disabledUserModules.tags : false);
     const userDB: UsersDB[] = [];
     const userIDs: string[] = [];
@@ -454,6 +455,9 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
     }
 
     userIDs.push(...manualUserIDs);
+    if (((typeof disabledUserModules === 'object') ? !(disabledUserModules.yourFriends) : true)) {
+        userIDs.push(...await getFriendUserIDs(domain, sessionID));
+    }
     const uniqueUserIDs = [...new Set(userIDs)];
 
     if (uniqueUserIDs.length > 0) {
@@ -495,4 +499,35 @@ async function getColumnUsers(database: Database, table: string, column = 'user_
             }
         });
     });
+}
+
+async function getFriendUserIDs(domain: string, sessionID: string): Promise<string[]> {
+    let totalPages = 1;
+    let page = 1;
+    const allFriends: string[] = [];
+
+    while (page <= totalPages) {
+        const friendsResponse = await enjinRequest<Friends.GetList>({ 
+            session_id: sessionID,
+            type: "all",
+            page
+        }, 'Friends.getList', domain);
+        
+        if (friendsResponse.error) {
+            statusMessage(MessageType.Error, `Error getting friends list: ${friendsResponse.error.code} ${friendsResponse.error.message}`)
+            break;
+        }
+
+        const { friends, pages } = friendsResponse.result;
+        totalPages = pages;
+
+        if (friends && friends.length > 0) {
+            allFriends.push(...friends.map(friend => friend.friend_id));
+        }
+        page++;
+    }
+
+    statusMessage(MessageType.Process, `Found ${allFriends.length} friends to be added to scraped users`);
+
+    return allFriends;
 }
