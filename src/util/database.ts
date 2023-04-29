@@ -10,7 +10,7 @@ let database: any = null;
 export async function databaseConnection(): Promise<Database> {
     return new Promise((resolve, reject) => {
         if (!database) {
-            const databasePath = path.join(process.cwd(),'./target/site.sqlite');
+            const databasePath = path.join(process.cwd(), './target/site.sqlite');
             database = new sqlite3.Database(databasePath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err: { message: any; }) => {
                 if (err) {
                     statusMessage(MessageType.Error, `Error connecting to the database: ${err.message}`);
@@ -25,7 +25,7 @@ export async function databaseConnection(): Promise<Database> {
     });
 }
 
-export async function initializeTables(database: Database): Promise<void> {
+export async function initializeTables2(database: Database): Promise<void> {
     const createTable = (table: TableSchema): Promise<void> => {
         return new Promise((resolve, reject) => {
             const columns = table.schema.join(", ");
@@ -49,6 +49,79 @@ export async function initializeTables(database: Database): Promise<void> {
     }
 }
 
+export async function initializeTables(database: Database): Promise<void> {
+    const createTable = (table: TableSchema): Promise<void> => {
+        return new Promise(async (resolve, reject) => {
+            const columns = table.schema.join(", ");
+            const createTableSQL = `CREATE TABLE IF NOT EXISTS ${table.name} (${columns})`;
+            database.run(createTableSQL, (err: { message: any }) => {
+                if (err) {
+                    statusMessage(MessageType.Error, `Error creating table '${table.name}': ${err.message}`);
+                    reject(err);
+                } else {
+                    statusMessage(MessageType.Completion, `Table '${table.name}' created or exists`);
+                    resolve();
+                }
+            });
+        });
+    };
+
+    const addMissingColumns = async (table: TableSchema) => {
+        const getExistingColumns = `PRAGMA table_info(${table.name})`;
+        const existingColumns = await new Promise<string[]>((resolve, reject) => {
+            database.all(getExistingColumns, (err, rows: { name: string;[key: string]: any; }[]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const columnNames = rows.map(row => row.name);
+                    resolve(columnNames);
+                }
+            });
+        });
+
+        if (existingColumns.includes("order")) {
+            // Rename the existing 'order' column to 'order_text'
+            const renameColumnSQL = `ALTER TABLE ${table.name} RENAME COLUMN 'order' TO order_text`;
+            await new Promise<void>((resolve, reject) => {
+                database.run(renameColumnSQL, (err: { message: any }) => {
+                    if (err) {
+                        statusMessage(MessageType.Error, `Error renaming column 'order' to 'order_text' in table '${table.name}': ${err.message}`);
+                        reject(err);
+                    } else {
+                        statusMessage(MessageType.Completion, `Column 'order' renamed to 'order_text' in table '${table.name}' successfully`);
+                        const orderIndex = existingColumns.indexOf("order");
+                        existingColumns[orderIndex] = "order_text";
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        for (const columnSchema of table.schema) {
+            const columnName = columnSchema.split(" ")[0];
+            if (!existingColumns.includes(columnName)) {
+                const addColumnSQL = `ALTER TABLE ${table.name} ADD COLUMN ${columnSchema}`;
+                await new Promise<void>((resolve, reject) => {
+                    database.run(addColumnSQL, (err: { message: any }) => {
+                        if (err) {
+                            statusMessage(MessageType.Error, `Error adding column '${columnName}' to table '${table.name}': ${err.message}`);
+                            reject(err);
+                        } else {
+                            statusMessage(MessageType.Completion, `Column '${columnName}' added to table '${table.name}' successfully`);
+                            resolve();
+                        }
+                    });
+                });
+            }
+        }
+    };
+
+    for (const table of tableSchemas) {
+        await createTable(table);
+        await addMissingColumns(table);
+    }
+}
+
 export async function queryTable(database: Database, table: String): Promise<void> {
     return new Promise((resolve, reject) => {
         database.all(`SELECT * FROM ${table}`, (err: Error | null, rows: any[]) => {
@@ -66,7 +139,7 @@ export async function queryTable(database: Database, table: String): Promise<voi
 export async function queryModuleIDs(database: Database, moduleType: string): Promise<string[]> {
     const moduleIDs: string[] = await new Promise((resolve, reject) => {
         database.all('SELECT preset_id FROM presets WHERE module_type = ?', [moduleType],
-            (err, rows: [{preset_id: string}]) => {
+            (err, rows: [{ preset_id: string }]) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -128,7 +201,7 @@ export async function updateRow(database: Database, table: string, whereKey: str
 
 export async function insertRows(database: Database, table: string, rows: (string | number | boolean | null)[][]): Promise<void> {
     return new Promise((resolve, reject) => {
-        if ( !rows.length ) {
+        if (!rows.length) {
             statusMessage(MessageType.Plain, `Ignoring insertion of 0 rows into table '${table}'`);
             resolve();
         }
