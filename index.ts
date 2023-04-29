@@ -95,13 +95,13 @@ async function main(): Promise<void> {
     config.manualForumModuleIDs && config.manualForumModuleIDs.length > 0 ? forumModuleIDs.push(...config.manualForumModuleIDs) : {};
     if (forumModuleIDs.length === 0) {
         statusMessage(MessageType.Critical, 'No forum module IDs for site, skipping forum scraping...');
-    } else if (config.disabledModules?.forums) {
+    } else if (config.disabledModules?.forums === true) {
         statusMessage(MessageType.Critical, 'Forums module disabled, skipping forum scraping...');
     } else if (await isModuleScraped(database, 'forums')) {
         statusMessage(MessageType.Critical, 'Forums already scraped, skipping forum scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping forums...');
-        await getForums(database, config.domain, sessionID, [...new Set(forumModuleIDs)]);
+        await getForums(database, config.domain, sessionID, siteAuth, [...new Set(forumModuleIDs)], config.disabledModules.forums);
         await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
         statusMessage(MessageType.Completion, 'Finished forum scraping');

@@ -16,7 +16,7 @@ export const tableSchemas: TableSchema[] = [
         schema: [
             'category_id TEXT PRIMARY KEY',
             'title TEXT',
-            `'order' TEXT`,
+            'order_text TEXT',
             'platform TEXT',
             'webpush_title TEXT',
             'regular_title TEXT'
@@ -31,7 +31,7 @@ export const tableSchemas: TableSchema[] = [
             'title TEXT',
             'description TEXT',
             'image TEXT',
-            `'order' TEXT`,
+            'order_text TEXT',
             'platform TEXT',
             'webpush_title TEXT',
             'listed TEXT',
@@ -261,6 +261,7 @@ export const tableSchemas: TableSchema[] = [
             'user_votes TEXT',
             'user_posts TEXT',
             'url TEXT',
+            'post_user_ip TEXT'
         ],
     },
 
@@ -449,7 +450,7 @@ export const tableSchemas: TableSchema[] = [
             'required TEXT',
             'bold TEXT',
             'help_text TEXT',
-            `'order' TEXT`,
+            'order_text TEXT',
             'other_options JSON',
             'options JSON',
             'conditions JSON',

@@ -304,6 +304,7 @@ export interface Post {
     user_votes: string;
     user_posts: string;
     url: string;
+    post_user_ip: string | null;
 }
 type ForumTuple = [
     string, string, string, string, string, string, string, string, string, string,
@@ -328,7 +329,7 @@ export interface ThreadsDB extends Array<ThreadTuple[number]> {}
 
 type PostTuple = [
     string, string, string, string, string, string, string, string, string, string, string,
-    string, string, string, string|null, string, string, boolean, string, string, string
+    string, string, string, string|null, string, string, boolean, string, string, string, string|null
 ]
 
 export interface PostsDB extends Array<PostTuple[number]> {}
