@@ -58,7 +58,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         userCount = progress[0];
     }
 
-    addExitListeners(['./target/recovery/notifier_progress.json'], [[userCount]])
+    //addExitListeners(['./target/recovery/notifier_progress.json'], [[userCount]])
 
     const totalUsers = users.length;
 
@@ -75,7 +75,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         if (delay > 0) {
             statusMessage(MessageType.Process, `Waiting ${delay / 1000} seconds before sending next message...`);
             await new Promise<void>(resolve => setTimeout(() => resolve(), delay));
-        } else if (i == 0) {
+        } else if (i != 0) {
             statusMessage(MessageType.Process, `Waiting 21 seconds before sending next message...`);
             await new Promise<void>(resolve => setTimeout(() => resolve(), 21000));
         }
@@ -85,7 +85,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
 
         userCount = [i];
         writeJsonFile('./target/recovery/notifier_progress.json', [userCount]);
-        /*const pmRequest = await enjinRequest<Messages.SendMessage> ({
+        const pmRequest = await enjinRequest<Messages.SendMessage> ({
             recipients: [users[i].user_id],
             message_subject: messageSubject,
             message_body: messageBody.replace('{USERNAME}', users[i].username),
@@ -132,12 +132,12 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
             // Set the rate-limit to 21 seconds for this auth as to avoid spamming the API
             rateLimits[authId] = new Date(Date.now() + 21000);
             continue;
-        }*/
+        }
 
         // Set the rate-limit to 21 seconds for auth as to avoid spamming the API
         rateLimits[authId] = new Date(Date.now() + 21000);
         statusMessage(MessageType.Process, `Sent message to ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
     }
 
-    removeExitListeners();
+    //removeExitListeners();
 }
