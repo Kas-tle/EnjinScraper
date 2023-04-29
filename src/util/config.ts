@@ -60,6 +60,7 @@ export interface Config {
         messageSubject: string;
         messageBody: string;
     };
+    overrideScrapeProgress?: boolean;
 }
 
 const defaultConfig: Config = {
@@ -113,7 +114,8 @@ const defaultConfig: Config = {
     retrySeconds: 5,
     retryTimes: 5,
     debug: true,
-    disableSSL: false
+    disableSSL: false,
+    overrideScrapeProgress: false
 };
 
 let cachedConfig: Config | null = null;

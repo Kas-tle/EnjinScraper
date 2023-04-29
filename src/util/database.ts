@@ -1,9 +1,10 @@
 const sqlite3 = require('sqlite3').verbose();
-import path from 'path';
+import path, { resolve } from 'path';
 import { Database } from 'sqlite3';
 import { TableSchema } from '../interfaces/tableschema';
 import { tableSchemas } from './tables';
 import { MessageType, statusMessage } from './console';
+import { getConfig } from './config';
 
 let database: any = null;
 
@@ -261,6 +262,12 @@ export async function updateRows(database: Database, table: string, whereKey: st
 }
 
 export async function isModuleScraped(database: Database, module: string): Promise<boolean> {
+    const config = await getConfig();
+
+    if (config.overrideScrapeProgress === true) {
+        return false;
+    }
+
     return new Promise((resolve, reject) => {
         database.get(`SELECT scraped FROM scrapers WHERE module = ? AND scraped = ?`, [module, true], (err, row) => {
             if (err) {
