@@ -473,8 +473,8 @@ export async function getUsers(database: Database, domain: string, apiKey: strin
                 null
             ]);
         }
-        await insertRows(database, 'users', userDB);
     }
+    await insertRows(database, 'users', userDB);
 }
 
 async function getColumnUsers(database: Database, table: string, column='user_id'): Promise<string[]> {
