@@ -66,7 +66,9 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "manualUserIDs": [],
     "disabledModules": {
         "html": false,
-        "forums": false,
+        "forums": {
+            "postIPs": true
+        },
         "galleries": false,
         "news": false,
         "wikis": false,
