@@ -34,7 +34,7 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
 
     let userCount = [0];
     const rateLimits: { 
-        [authId: number]: Date | undefined
+        [authId: number]: number | undefined
     } = Object.fromEntries(siteAuths.map((_, i) => [i, undefined]));
 
     const findNextAuth = () => {
@@ -48,8 +48,9 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         
         // Return the auth with the closest rate-limit to now
         const authsWithRateLimit = authIds.filter(id => rateLimits[id]);
-        const nextRateLimit = Math.min(...authsWithRateLimit.map(id => rateLimits[id]!.getTime()));
-        return authsWithRateLimit.find(id => rateLimits[id]!.getTime() === nextRateLimit)!;
+        const nextRateLimit = Math.min(...authsWithRateLimit.map(id => rateLimits[id]!));
+        // statusMessage(MessageType.Process, `Before return from findNextAuth: ${JSON.stringify(rateLimits)}`);
+        return authsWithRateLimit.find(id => rateLimits[id]! === nextRateLimit)!;
     }
 
     if (fileExists('./target/recovery/notifier_progress.json')) {
@@ -68,10 +69,10 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
         
         // Select the next auth with the lowest rate or no rate-limit
         const authId = findNextAuth();
-        statusMessage(MessageType.Process, `Selecting Auth ${authId} with rate-limit '${rateLimits[authId] ? rateLimits[authId]!.getTime() : 'none'}'...`);
+        statusMessage(MessageType.Process, `Selecting Auth ${authId} with rate-limit '${rateLimits[authId] ? rateLimits[authId]! : 'none'}'...`);
 
         // Sleep if the auth has a rate-limit
-        const delay = rateLimits[authId] ? Math.max(rateLimits[authId]!.getTime() - Date.now(), 0) : 0;
+        const delay = rateLimits[authId] ? Math.max(rateLimits[authId]! - Date.now(), 0) : 0;
         if (delay > 0) {
             statusMessage(MessageType.Process, `Waiting ${delay / 1000} seconds before sending next message...`);
             await new Promise<void>(resolve => setTimeout(() => resolve(), delay));
@@ -99,6 +100,9 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
             if (pmRequest.error.message.startsWith('This user has chosen to only')) {
                 await insertRow(database, 'private_users', users[i].user_id, users[i].username);
                 statusMessage(MessageType.Process, `Skipping ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
+
+                // Set the rate-limit to 21 seconds for this auth as to avoid spamming the API
+                rateLimits[authId] = Date.now() + 21000;
             } else {
                 const match = pmRequest.error.message.match(/Please wait (\d+) (\w+) before sending another message\./);
                 const dailyLimitMatch = pmRequest.error.message.match(/You have reached your daily message limit, please try again tomorrow\./);
@@ -120,17 +124,17 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
                     statusMessage(MessageType.Process, `Auth ${authId} rate-limited for ${timeInMilliseconds}ms (${time} ${unit}). Trying ${users[i].user_id} ${users[i].username} again...`);
 
                     // Add the rate-limit to the auth
-                    rateLimits[authId] = new Date(Date.now() + timeInMilliseconds);
+                    rateLimits[authId] = Date.now() + timeInMilliseconds;
 
                     // Retry the user.
                     i--;
-                    
-                    continue;
                 } else if (dailyLimitMatch) {
+                    // statusMessage(MessageType.Process, `Before set: ${JSON.stringify(rateLimits)}`);
                     statusMessage(MessageType.Process, `Auth ${authId} rate-limited for the day. Setting a 1-hour cooldown. Trying ${users[i].user_id} ${users[i].username} again...`);
 
                     // Add the rate-limit to the auth
-                    rateLimits[authId] = new Date(Date.now() + 60 * 60 * 1000);
+                    rateLimits[authId] = Date.now() + 60 * 60 * 1000;
+                    // statusMessage(MessageType.Process, `After set: ${JSON.stringify(rateLimits)}`);
 
                     // Retry the user.
                     i--;
@@ -138,14 +142,11 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
                     process.kill(process.pid, 'SIGINT');
                 }
             }
-            // Set the rate-limit to 21 seconds for this auth as to avoid spamming the API
-            rateLimits[authId] = new Date(Date.now() + 21000);
-            continue;
+        } else {
+            // Set the rate-limit to 21 seconds for auth as to avoid spamming the API
+            rateLimits[authId] = Date.now() + 21000;
+            statusMessage(MessageType.Process, `Sent message to ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
         }
-
-        // Set the rate-limit to 21 seconds for auth as to avoid spamming the API
-        rateLimits[authId] = new Date(Date.now() + 21000);
-        statusMessage(MessageType.Process, `Sent message to ${users[i].user_id} ${users[i].username} [(++${userCount[0]}/${totalUsers})]`);
     }
 
     //removeExitListeners();
