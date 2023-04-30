@@ -35,9 +35,11 @@ async function main(): Promise<void> {
 
     // Login to API and get session ID
     const sessionID = config.sessionID ? config.sessionID : await authenticateAPI(config.domain, config.email, config.password);
+    statusMessage(MessageType.Info, `Session ID ${sessionID}`);
 
     // Login to site and get PHPSESSID and csrf_token
     const siteAuth = config.siteAuth ? config.siteAuth : await authenticateSite(config.domain, config.email, config.password);
+    statusMessage(MessageType.Info, `Site Auth ${siteAuth?.csrfToken}, ${siteAuth?.phpSessID}`);
 
     var siteAuths:SiteAuth[] = [];
     if (config.notifier) {
