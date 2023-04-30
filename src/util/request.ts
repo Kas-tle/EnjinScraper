@@ -150,8 +150,7 @@ export async function getRequest(domain: string, url: string, headers: any, debu
         }
     }
     statusMessage(MessageType.Error, `Configured retry limit exceeded. Please try again later. Exiting...`);
-    process.kill(process.pid, 'SIGINT');
-    return Promise.reject();
+    throw new Error('Must exit now!');
 }
 
 export async function throttledGetRequest(domain: string, url: string, headers: any, debugPath = '', overrideDebug = false, responseType = undefined): Promise<AxiosResponse> {
