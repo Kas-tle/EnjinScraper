@@ -135,13 +135,13 @@ async function main(): Promise<void> {
     config.manualForumModuleIDs && config.manualForumModuleIDs.length > 0 ? forumModuleIDs.push(...config.manualForumModuleIDs) : {};
     if (forumModuleIDs.length === 0) {
         statusMessage(MessageType.Critical, 'No forum module IDs for site, skipping forum scraping...');
-    } else if (config.disabledModules?.forums) {
+    } else if (config.disabledModules?.forums === true) {
         statusMessage(MessageType.Critical, 'Forums module disabled, skipping forum scraping...');
     } else if (await isModuleScraped(database, 'forums')) {
         statusMessage(MessageType.Critical, 'Forums already scraped, skipping forum scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping forums...');
-        await getForums(database, config.domain, sessionID, [...new Set(forumModuleIDs)]);
+        await getForums(database, config.domain, sessionID, siteAuth, [...new Set(forumModuleIDs)], config.disabledModules.forums);
         await insertRow(database, 'scrapers', 'forums', true);
         deleteFiles(['./target/recovery/forum_progress.json']);
         statusMessage(MessageType.Completion, 'Finished forum scraping');
@@ -244,7 +244,7 @@ async function main(): Promise<void> {
         statusMessage(MessageType.Critical, 'Users already scraped, skipping user tag scraping...');
     } else {
         statusMessage(MessageType.Info, 'Scraping users...');
-        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, config.apiKey, config.disabledModules.users, config.manualUserIDs ?? []);
+        await isModuleScraped(database, 'users') ? {} : await getUsers(database, config.domain, sessionID, config.apiKey, config.disabledModules.users, config.manualUserIDs ?? []);
         await insertRow(database, 'scrapers', 'users', true);
         await isModuleScraped(database, 'user_data') ? {} : await getAdditionalUserData(config.domain, sessionID, siteAuth, database, config.disabledModules.users, adminMode);
         await insertRow(database, 'scrapers', 'user_data', true);

@@ -23,7 +23,9 @@ export interface Config {
     manualUserIDs?: string[];
     disabledModules: {
         html: boolean;
-        forums: boolean;
+        forums: boolean | {
+            postIPs: boolean;
+		};
         galleries: boolean;
         news: boolean;
         wikis: boolean;
@@ -38,6 +40,7 @@ export interface Config {
             games: boolean;
             photos: boolean;
             wall: boolean;
+            yourFriends: boolean;
         };
         files: boolean | {
             s3: boolean;
@@ -58,6 +61,7 @@ export interface Config {
         messageBody: string;
         accounts: Account[];
     };
+    overrideScrapeProgress?: boolean;
 }
 
 const defaultConfig: Config = {
@@ -80,7 +84,9 @@ const defaultConfig: Config = {
     manualUserIDs: [],
     disabledModules: {
         html: false,
-        forums: false,
+        forums: {
+            postIPs: true,
+		},
         galleries: false,
         news: false,
         wikis: false,
@@ -95,6 +101,7 @@ const defaultConfig: Config = {
             games: true,
             photos: true,
             wall: true,
+            yourFriends: false,
         },
         files: {
             s3: false,
@@ -123,7 +130,8 @@ const defaultConfig: Config = {
                 password: "somepassword2"
             }
         ]
-    }
+    },
+    overrideScrapeProgress: false
 };
 
 let cachedConfig: Config | null = null;

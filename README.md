@@ -66,7 +66,9 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "manualUserIDs": [],
     "disabledModules": {
         "html": false,
-        "forums": false,
+        "forums": {
+            "postIPs": true
+        },
         "galleries": false,
         "news": false,
         "wikis": false,
@@ -80,7 +82,8 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
             "characters": true,
             "games": true,
             "photos": true,
-            "wall": true
+            "wall": true,
+            "yourFriends": true
         },
         "files": {
             "s3": false,
@@ -94,7 +97,8 @@ Optionally, create a `config.json` file in the root directory of the project. Ot
     "retrySeconds": 5, // Setting to 0 will retry instantly
     "retryTimes": 5, // Setting to 0 will disable retries; setting to -1 will retry indefinitely
     "debug": true,
-    "disableSSL": false
+    "disableSSL": false,
+    "overrideScrapeProgress": false // setting this to true will ignore the scrapers internal progress tracking and scrape all non-disabled modules
 }
 ```
 

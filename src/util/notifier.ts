@@ -17,8 +17,8 @@ export async function startNotifier(database: Database, domain: string, apiKey: 
     statusMessage(MessageType.Info, 'Press enter to continue or Ctrl + C to exit...');
     await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
 
-    const disableUserParams = {ips: true, tags: true, fullinfo: true, characters: true, games: true, photos: true, wall: true};
-    await isModuleScraped(database, 'users') ? {} : await getUsers(database, domain, apiKey, disableUserParams, []);
+    const disableUserParams = {ips: true, tags: true, fullinfo: true, characters: true, games: true, photos: true, wall: true, yourFriends: true};
+    await isModuleScraped(database, 'users') ? {} : await getUsers(database, domain, '', apiKey, disableUserParams, []);
 
     const users: { user_id: string, username: string }[] = await new Promise((resolve, reject) => {
         database.all(`SELECT user_id, username FROM users`,
