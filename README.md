@@ -1,3 +1,7 @@
+# NOTICE OF ARCHIVAL
+> **Note**
+> **Enjin is now shutdown so this repository has been archived. I now plan to focusing my efforts on doing things with the data scraped by this tool, such as visualizing and import to other services. You can find out more about the status of such projects in the [Discord](https://discord.gg/2SfGAMskWt)**
+
 # EnjinScraper [![Discord](https://img.shields.io/discord/1099765247344128093.svg?color=%237289da&label=discord)](https://discord.gg/2SfGAMskWt) [![License: AGPL](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE) [![npm version](https://badge.fury.io/js/enjinscraper.svg)](https://badge.fury.io/js/enjinscraper)
 
 Scrapes an Enjin site via the Enjin API.
