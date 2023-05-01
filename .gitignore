@@ -105,12 +105,14 @@ dist/
 
 # Output
 target/
+target*/
 config.json
 config2.json
 config3.json
 credentials.json
 package-lock.json
 *.sqlite
+*.json
 
 # Stream
 .censitive

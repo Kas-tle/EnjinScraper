@@ -1,6 +1,6 @@
 import fs from 'fs';
 import readline from 'readline';
-import { SiteAuth } from '../interfaces/generic';
+import { SiteAuth, Account } from '../interfaces/generic';
 import { MessageType, statusMessage } from './console';
 
 export interface Config {
@@ -59,6 +59,7 @@ export interface Config {
         enabled: boolean;
         messageSubject: string;
         messageBody: string;
+        accounts: Account[];
     };
     overrideScrapeProgress?: boolean;
 }
@@ -115,6 +116,21 @@ const defaultConfig: Config = {
     retryTimes: 5,
     debug: true,
     disableSSL: false,
+    notifier: {
+        enabled: false,
+        messageSubject: "",
+        messageBody: "",
+        accounts: [
+            {
+                email: "someemail@email.com",
+                password: "somepassword"
+            },
+            {
+                email: "someemail2@email.com",
+                password: "somepassword2"
+            }
+        ]
+    },
     overrideScrapeProgress: false
 };
 

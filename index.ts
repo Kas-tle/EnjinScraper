@@ -1,10 +1,12 @@
 #! /usr/bin/env node
 
+import fs from 'fs';
+import path from 'path';
 import packageJson from './package.json';
 import { getConfig } from './src/util/config';
 import { deleteFiles, ensureDirectory } from './src/util/files';
 import { databaseConnection, initializeTables, insertRow, isModuleScraped, queryModuleIDs } from './src/util/database';
-import { authenticateAPI, authenticateSite, getSiteID, isSiteAdmin } from './src/scrapers/authenticate';
+import { authenticateAPI, authenticateAPINotifier, authenticateSite, authenticateSiteNotifier, getSiteID, isSiteAdmin } from './src/scrapers/authenticate';
 import { getForums } from './src/scrapers/forums';
 import { getNews } from './src/scrapers/news';
 import { getAllTickets } from './src/scrapers/tickets';
@@ -18,6 +20,7 @@ import { getGalleries } from './src/scrapers/galleries';
 import { MessageType, statusMessage } from './src/util/console';
 import { getHTMLModules } from './src/scrapers/html';
 import { startNotifier } from './src/util/notifier';
+import { SiteAuth } from './src/interfaces/generic';
 
 async function main(): Promise<void> {
     // Needed for exit handler
@@ -32,9 +35,46 @@ async function main(): Promise<void> {
 
     // Login to API and get session ID
     const sessionID = config.sessionID ? config.sessionID : await authenticateAPI(config.domain, config.email, config.password);
+    statusMessage(MessageType.Info, `Session ID ${sessionID}`);
 
     // Login to site and get PHPSESSID and csrf_token
     const siteAuth = config.siteAuth ? config.siteAuth : await authenticateSite(config.domain, config.email, config.password);
+    statusMessage(MessageType.Info, `Site Auth ${siteAuth?.csrfToken}, ${siteAuth?.phpSessID}`);
+
+    var siteAuths:SiteAuth[] = [];
+    if (config.notifier) {
+        if (config.notifier.accounts) {
+            for (let i = 0; i < config.notifier.accounts.length; i++) {
+                if (config.notifier.accounts[i].email === config.email) {
+                    config.notifier.accounts[i].sessionID = sessionID;
+                    if (siteAuth !== null && typeof siteAuth !== 'undefined') {
+                        config.notifier.accounts[i].siteAuth = siteAuth;
+                        siteAuths.push(siteAuth);
+                    }
+                    fs.writeFileSync(path.join(process.cwd(), './config.json'), JSON.stringify(config, null, 4));
+                } else {
+                    if (!config.notifier.accounts[i].sessionID) {
+                        await authenticateAPINotifier(config.domain, config.notifier.accounts[i].email, config.notifier.accounts[i].password);
+                    }
+                    let curSiteAuth:SiteAuth|undefined|null = config.notifier.accounts[i].siteAuth
+                    if (curSiteAuth !== null && typeof curSiteAuth !== 'undefined') {
+                        siteAuths.push(curSiteAuth);
+                    } else {
+                        curSiteAuth = await authenticateSiteNotifier(config.domain, config.notifier.accounts[i].email, config.notifier.accounts[i].password);
+                        if (curSiteAuth !== null && typeof curSiteAuth !== 'undefined') {
+                            siteAuths.push(curSiteAuth);
+                        }
+                    }
+                }
+            }
+        } else {
+            let email = config.email;
+            let password = config.password;
+            let siteAuthOrUndefined = siteAuth != null ? siteAuth : undefined;
+            let account = { email, password, sessionID, siteAuthOrUndefined };
+            config.notifier.accounts = [ account ];
+        }
+    }
 
     // Check if we are admin
     let adminMode: boolean = true;
@@ -57,8 +97,8 @@ async function main(): Promise<void> {
     await initializeTables(database);
 
     // Notifier Mode
-    if (siteAuth != null && config.notifier && config.notifier.enabled === true && config.apiKey) {
-        await startNotifier(database, config.domain, config.apiKey, siteAuth, config.notifier.messageSubject, config.notifier.messageBody);
+    if (siteAuth != null && config.notifier && config.notifier.enabled === true && config.apiKey && siteAuths.length != 0) {
+        await startNotifier(database, config.domain, config.apiKey, siteAuths, config.notifier.messageSubject, config.notifier.messageBody);
         deleteFiles(['./target/recovery/notifier_progress.json']);
     }
 
